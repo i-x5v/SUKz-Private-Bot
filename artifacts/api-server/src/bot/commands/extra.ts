@@ -107,12 +107,26 @@ export const extraCommands = [
   },
   {
     data: new SlashCommandBuilder()
-      .setName("say")
-      .setDescription("Make the bot say something")
-      .addStringOption(opt => opt.setName("message").setDescription("Message to say").setRequired(true)),
+      .setName("dm")
+      .setDescription("Send a private DM to a user")
+      .addUserOption(opt => opt.setName("user").setDescription("User to send DM to").setRequired(true))
+      .addStringOption(opt => opt.setName("message").setDescription("Message to send").setRequired(true)),
     async execute(interaction: ChatInputCommandInteraction) {
-      const msg = interaction.options.getString("message", true);
-      await interaction.reply({ content: msg });
+      const user = interaction.options.getUser("user", true);
+      const message = interaction.options.getString("message", true);
+      if (user.bot) return interaction.reply({ content: "❌ Cannot send DM to a bot!", ephemeral: true });
+      try {
+        const embed = new EmbedBuilder()
+          .setTitle("📨 New Message")
+          .setDescription(message)
+          .setColor(0x5865f2)
+          .setFooter({ text: `Sent by ${interaction.user.username} from ${interaction.guild?.name ?? "a server"}` })
+          .setTimestamp();
+        await user.send({ embeds: [embed] });
+        await interaction.reply({ content: `✅ DM sent successfully to **${user.username}**!`, ephemeral: true });
+      } catch {
+        await interaction.reply({ content: `❌ Could not send DM to **${user.username}**. They may have DMs disabled.`, ephemeral: true });
+      }
     },
   },
   {

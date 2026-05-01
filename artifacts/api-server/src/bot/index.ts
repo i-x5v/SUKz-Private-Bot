@@ -1,4 +1,4 @@
-import { Client, Collection, Events, GatewayIntentBits, REST, Routes } from "discord.js";
+import { Client, Collection, Events, GatewayIntentBits, REST, Routes, ActivityType } from "discord.js";
 import { logger } from "../lib/logger";
 import { generalCommands } from "./commands/general";
 import { funCommands } from "./commands/fun";
@@ -56,6 +56,11 @@ export async function startBot(): Promise<void> {
 
   client.once(Events.ClientReady, async (readyClient) => {
     logger.info({ tag: readyClient.user.tag, commands: commands.size }, "Discord bot is ready!");
+
+    readyClient.user.setPresence({
+      activities: [{ name: "For help /help", type: ActivityType.Watching }],
+      status: "online",
+    });
 
     const rest = new REST().setToken(token);
     const commandBodies = allCommands.map(cmd => cmd.data.toJSON());
