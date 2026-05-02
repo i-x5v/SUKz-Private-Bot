@@ -1,12 +1,12 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
-const aiBaseUrl = process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"];
-const aiApiKey = process.env["AI_INTEGRATIONS_OPENAI_API_KEY"] ?? process.env["OPENAI_API_KEY"] ?? "no-key";
+const geminiBaseUrl = process.env["AI_INTEGRATIONS_GEMINI_BASE_URL"];
+const geminiApiKey = process.env["AI_INTEGRATIONS_GEMINI_API_KEY"] ?? process.env["GEMINI_API_KEY"] ?? "no-key";
 
-const openaiClient = new OpenAI({
-  ...(aiBaseUrl ? { baseURL: aiBaseUrl } : {}),
-  apiKey: aiApiKey,
+const geminiClient = new GoogleGenAI({
+  apiKey: geminiApiKey,
+  ...(geminiBaseUrl ? { baseURL: geminiBaseUrl } : {}),
 });
 
 const xpData = new Map<string, number>();
@@ -152,19 +152,16 @@ export const extraCommands = [
       try { await interaction.deferReply(); } catch { return; }
 
       try {
-        const response = await openaiClient.chat.completions.create({
-          model: "gpt-4o-mini",
-          max_completion_tokens: 1024,
-          messages: [
-            {
-              role: "system",
-              content: "أنت مساعد ذكي ومفيد في سيرفر ديسكورد. رد بشكل مختصر وواضح. إذا كان السؤال بالعربي رد بالعربي، وإذا كان بالإنجليزي رد بالإنجليزي.",
-            },
-            { role: "user", content: userMessage },
-          ],
+        const response = await geminiClient.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ role: "user", parts: [{ text: userMessage }] }],
+          config: {
+            systemInstruction: "أنت مساعد ذكي ومفيد في سيرفر ديسكورد. رد بشكل مختصر وواضح. إذا كان السؤال بالعربي رد بالعربي، وإذا كان بالإنجليزي رد بالإنجليزي.",
+            maxOutputTokens: 1024,
+          },
         });
 
-        const aiReply = response.choices[0]?.message?.content ?? "لم أتمكن من الرد، حاول مرة ثانية.";
+        const aiReply = response.text ?? "لم أتمكن من الرد، حاول مرة ثانية.";
 
         const embed = new EmbedBuilder()
           .setColor(0x5865f2)
@@ -173,7 +170,7 @@ export const extraCommands = [
             { name: "💬 رسالتك", value: userMessage.slice(0, 1024) },
             { name: "🤖 الذكاء الاصطناعي", value: aiReply.slice(0, 1024) },
           )
-          .setFooter({ text: "Powered by AI • Bot_SUKz" })
+          .setFooter({ text: "Powered by Gemini AI • Bot_SUKz" })
           .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
