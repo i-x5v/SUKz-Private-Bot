@@ -117,7 +117,6 @@ export const extraCommands = [
       await interaction.reply({ embeds: [embed] });
     },
   },
-  },
   {
     data: new SlashCommandBuilder()
       .setName("chat")
