@@ -119,14 +119,5 @@ export const socialCommands = [
       await interaction.reply(`**${interaction.user.username}** kisses **${target.username}**! 💋`);
     },
   },
-  {
-    data: new SlashCommandBuilder()
-      .setName("highfive")
-      .setDescription("High five someone!")
-      .addUserOption(opt => opt.setName("user").setDescription("User to high five").setRequired(true)),
-    async execute(interaction: ChatInputCommandInteraction) {
-      const target = interaction.options.getUser("user", true);
-      await interaction.reply(`**${interaction.user.username}** high fives **${target.username}**! 🙌`);
-    },
   },
 ];
