@@ -1,4 +1,4 @@
-import { Client, Collection, Events, GatewayIntentBits, REST, Routes, ActivityType } from "discord.js";
+import { Client, Collection, Events, GatewayIntentBits, REST, Routes, ActivityType, ButtonInteraction } from "discord.js";
 import { logger } from "../lib/logger";
 import { generalCommands } from "./commands/general";
 import { funCommands } from "./commands/fun";
@@ -11,6 +11,8 @@ import { gamesCommands } from "./commands/games";
 import { socialCommands } from "./commands/social";
 import { configCommands } from "./commands/config";
 import { extraCommands } from "./commands/extra";
+import { arabicFeaturesCommands } from "./commands/arabic_features";
+import { ticketsCommands, handleTicketButton } from "./commands/tickets";
 
 type Command = {
   data: { name: string; toJSON(): unknown };
@@ -29,6 +31,8 @@ const allCommands: Command[] = [
   ...socialCommands,
   ...configCommands,
   ...extraCommands,
+  ...arabicFeaturesCommands,
+  ...ticketsCommands,
 ];
 
 const isProduction = process.env["NODE_ENV"] === "production";
@@ -62,7 +66,7 @@ export async function startBot(): Promise<void> {
     logger.info({ tag: readyClient.user.tag, commands: commands.size, mode: isProduction ? "production" : "development" }, "Discord bot is ready!");
 
     readyClient.user.setPresence({
-      activities: [{ name: "For help /help", type: ActivityType.Watching }],
+      activities: [{ name: "اسألني أي شيء /ask", type: ActivityType.Watching }],
       status: "online",
     });
 
@@ -70,21 +74,19 @@ export async function startBot(): Promise<void> {
     const commandBodies = allCommands.map(cmd => cmd.data.toJSON());
 
     if (isProduction) {
-      // Production (Railway etc.): register as global commands — work in all servers
       try {
         await rest.put(
           Routes.applicationCommands(readyClient.user.id),
           { body: commandBodies },
         );
-        logger.info({ count: commandBodies.length }, "Global commands registered! (may take up to 1 hour to appear)");
+        logger.info({ count: commandBodies.length }, "Global commands registered!");
       } catch (err) {
         logger.error({ err }, "Failed to register global commands");
       }
     } else {
-      // Development (Replit): register as guild commands per server — instant
       const guilds = readyClient.guilds.cache;
       if (guilds.size === 0) {
-        logger.warn("Bot is not in any guilds — commands not registered yet. Invite the bot to a server.");
+        logger.warn("Bot is not in any guilds — commands not registered yet.");
       }
       for (const [guildId, guild] of guilds) {
         try {
@@ -101,22 +103,34 @@ export async function startBot(): Promise<void> {
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
+    // Handle button interactions
+    if (interaction.isButton()) {
+      const btn = interaction as ButtonInteraction;
+      if (
+        btn.customId.startsWith("close_ticket_") ||
+        btn.customId.startsWith("claim_ticket_") ||
+        btn.customId.startsWith("transcript_ticket_")
+      ) {
+        try { await handleTicketButton(btn); } catch (err) { logger.error({ err }, "Button handler error"); }
+        return;
+      }
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     const command = commands.get(interaction.commandName);
     if (!command) {
-      try { await interaction.reply({ content: "❌ Unknown command!", flags: 64 }); } catch { /* expired */ }
+      try { await interaction.reply({ content: "❌ أمر غير موجود!", flags: 64 }); } catch { /* expired */ }
       return;
     }
 
     try {
       await command.execute(interaction);
     } catch (err) {
-      // Ignore "Unknown interaction" (10062) — another bot instance already responded
       if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 10062) return;
       logger.error({ err, command: interaction.commandName }, "Error executing command");
       try {
-        const errorMsg = { content: "❌ An error occurred while executing this command!", flags: 64 };
+        const errorMsg = { content: "❌ حدث خطأ أثناء تنفيذ الأمر!", flags: 64 };
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp(errorMsg);
         } else {
