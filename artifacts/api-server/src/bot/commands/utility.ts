@@ -1,5 +1,4 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
-import crypto from "crypto";
 
 export const utilityCommands = [
   {
@@ -136,26 +135,6 @@ export const utilityCommands = [
         )
         .setColor(parseInt(hex, 16));
       await interaction.reply({ embeds: [embed] });
-    },
-  },
-  {
-    data: new SlashCommandBuilder()
-      .setName("base64")
-      .setDescription("Encode or decode Base64")
-      .addStringOption(opt => opt.setName("text").setDescription("Text to encode/decode").setRequired(true))
-      .addStringOption(opt => opt.setName("mode").setDescription("encode or decode").setRequired(true).addChoices(
-        { name: "Encode", value: "encode" },
-        { name: "Decode", value: "decode" },
-      )),
-    async execute(interaction: ChatInputCommandInteraction) {
-      const text = interaction.options.getString("text", true);
-      const mode = interaction.options.getString("mode", true);
-      try {
-        const result = mode === "encode" ? Buffer.from(text).toString("base64") : Buffer.from(text, "base64").toString("utf-8");
-        await interaction.reply(`🔐 **${mode === "encode" ? "Encoded" : "Decoded"}:** \`${result}\``);
-      } catch {
-        await interaction.reply("❌ Invalid input for decoding!");
-      }
     },
   },
 ];
