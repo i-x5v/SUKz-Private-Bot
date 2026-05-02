@@ -209,4 +209,207 @@ export const extraCommands = [
       await interaction.reply(`💘 **${u1.username}** + **${u2.username}**\n${bar} **${percent}%**\n${percent > 80 ? "💍 Perfect match!" : percent > 50 ? "💕 Good match!" : percent > 30 ? "🤔 Maybe?" : "💔 Not meant to be..."}`);
     },
   },
+  {
+    data: new SlashCommandBuilder()
+      .setName("console")
+      .setDescription("حل مشاكل أجهزة الكونسل عن طريق كود الخطأ / Fix console errors by error code")
+      .addStringOption(opt =>
+        opt.setName("platform")
+          .setDescription("اختر الجهاز / Choose your console")
+          .setRequired(true)
+          .addChoices(
+            { name: "PlayStation 4 (PS4)", value: "ps4" },
+            { name: "PlayStation 5 (PS5)", value: "ps5" },
+            { name: "Xbox One / Series", value: "xbox" },
+            { name: "Nintendo Switch", value: "nintendo" },
+          )
+      )
+      .addStringOption(opt =>
+        opt.setName("code")
+          .setDescription("كود الخطأ / Error code (e.g. CE-34878-0, E100, 2110-3127)")
+          .setRequired(true)
+      ),
+    async execute(interaction: ChatInputCommandInteraction) {
+      const platform = interaction.options.getString("platform", true);
+      const rawCode = interaction.options.getString("code", true).trim().toUpperCase();
+
+      type ErrorDb = Record<string, { title: string; steps: string[]; link?: string }>;
+
+      const ps4db: ErrorDb = {
+        "CE-34878-0": { title: "تعطل التطبيق / Application Crashed", steps: ["أعد تشغيل اللعبة", "احذف ملفات الحفظ التالفة من الإعدادات", "أعد تثبيت اللعبة", "تحديث نظام PS4 لآخر إصدار"] },
+        "NW-31246-6": { title: "مشكلة الاتصال بالشبكة / Network Connection Error", steps: ["تحقق من اتصال الإنترنت", "أعد تشغيل الراوتر", "اذهب لـ Settings > Network > Test Internet Connection", "جرب توصيل كابل LAN مباشرة"] },
+        "WS-37368-7": { title: "حساب PSN موقوف / PSN Account Suspended", steps: ["تحقق بريدك الإلكتروني لرسالة من PlayStation", "راسل دعم PlayStation على: playstation.com/support", "إذا تم إيقاف حسابك بسبب مخالفة راجع سياسة الاستخدام"] },
+        "CE-32889-0": { title: "لا يمكن تشغيل التطبيق / Cannot Start Application", steps: ["احذف اللعبة وأعد تثبيتها", "تحقق من أن القرص غير مخدوش", "أعد بناء قاعدة البيانات: Safe Mode > Rebuild Database"] },
+        "CE-41839-1": { title: "تحديث مطلوب / Update Required", steps: ["اذهب لـ Settings > System Software Update", "اتصل بالإنترنت وحاول مجدداً", "نزل التحديث عبر USB من موقع PlayStation"] },
+        "WC-40376-0": { title: "مشكلة في المحفظة / Wallet Error", steps: ["تحقق من رصيد محفظة PSN", "أعد إضافة طريقة دفع من الإعدادات", "جرب من المتصفح على ps.playstation.com"] },
+        "SU-42118-6": { title: "فشل التحديث / Update Failed", steps: ["احذف ملف التحديث وأعد التنزيل", "جرب التحديث عبر Safe Mode", "تأكد من وجود مساحة كافية على القرص الصلب"] },
+        "E-8210604A": { title: "خطأ في الدفع / Payment Error", steps: ["تحقق من بيانات البطاقة", "اتصل بالبنك للتأكد من عدم وجود حجب", "جرب PayPal كبديل"] },
+      };
+
+      const ps5db: ErrorDb = {
+        "CE-108255-1": { title: "تعطل النظام / System Crash", steps: ["أعد تشغيل PS5", "اذهب لـ Safe Mode واختر Clear Cache and Rebuild Database", "تحقق من التهوية وعدم ارتفاع الحرارة", "أعد تثبيت السوفت وير من USB إذا استمرت المشكلة"] },
+        "CE-107520-6": { title: "خطأ في قاعدة البيانات / Database Error", steps: ["الدخول لـ Safe Mode (أمسك Power 7 ثواني)", "اختر Rebuild Database", "انتظر حتى تنتهي العملية (قد تأخذ وقتاً)"] },
+        "CE-100028-1": { title: "مشكلة في تثبيت اللعبة / Game Install Error", steps: ["احذف اللعبة وأعد التثبيت", "تحقق من مساحة SSD الداخلي", "جرب تحديث النظام أولاً"] },
+        "CE-112840-6": { title: "خطأ PSN / PSN Error", steps: ["تحقق من حالة PSN: status.playstation.com", "سجل خروج ثم ادخل مجدداً", "أعد تشغيل الجهاز"] },
+        "NW-102216-8": { title: "مشكلة WiFi / WiFi Error", steps: ["اذهب لـ Settings > Network > Setup Internet Connection", "أعد إدخال كلمة مرور الواي فاي", "جرب كابل LAN للحصول على اتصال أستقر"] },
+      };
+
+      const xboxdb: ErrorDb = {
+        "E100": { title: "فشل تحديث النظام / System Update Failed", steps: ["اضغط A لإعادة المحاولة", "إذا فشل: اذهب لـ Startup Troubleshooter", "جرب Offline System Update من support.xbox.com/xbox-one/console/system-update-solution"] },
+        "E101": { title: "تحديث مطلوب / Update Required", steps: ["اتصل بالإنترنت وأعد التشغيل", "اذهب لـ Settings > System > Updates", "جرب Hard Reset: أمسك Power 10 ثواني"] },
+        "E102": { title: "خطأ تحديث / Update Error E102", steps: ["جرب Offline System Update", "افصل الجهاز 30 ثانية ثم أعد التشغيل", "تواصل مع دعم Xbox إذا استمر"] },
+        "0X87E11838": { title: "اللعبة غير مثبتة / Game Not Installed", steps: ["احذف اللعبة وأعد التثبيت", "تحقق من مساحة التخزين", "تحقق من صلاحية اشتراك Game Pass"] },
+        "0X8007000E": { title: "ذاكرة غير كافية / Insufficient Memory", steps: ["أغلق التطبيقات التي تعمل في الخلفية", "أعد تشغيل الجهاز", "احذف بيانات غير مستخدمة"] },
+        "0X80190193": { title: "خطأ حساب Xbox / Account Error", steps: ["سجل خروج وادخل مجدداً", "تحقق من اشتراك Xbox Live/Game Pass", "تأكد أن طريقة الدفع سارية"] },
+        "0X87DD0006": { title: "فشل تسجيل الدخول / Sign-in Failed", steps: ["تحقق من اتصال الإنترنت", "تحقق من حالة Xbox Live: xboxstatus.com", "جرب حذف حسابك وإضافته مجدداً"] },
+      };
+
+      const nintendodb: ErrorDb = {
+        "2002-4153": { title: "خطأ في الاتصال / Connection Error", steps: ["اذهب لـ System Settings > Internet > Test Connection", "أعد تشغيل الراوتر", "تحقق من أن DNS مضبوط على Auto"] },
+        "2110-3127": { title: "مشكلة WiFi / WiFi Problem", steps: ["أعد إدخال كلمة مرور الواي فاي", "قرّب Switch من الراوتر", "جرب تغيير DNS لـ 8.8.8.8 و 8.8.4.4"] },
+        "2137-8056": { title: "خطأ eShop / eShop Error", steps: ["تحقق من حالة Nintendo eShop", "امسح Cookies: System Settings > Internet > Connection Settings", "جرب لاحقاً إذا كان eShop تحت الصيانة"] },
+        "2168-0002": { title: "خطأ في التحديث / Update Error", steps: ["تحقق من اتصال الإنترنت", "تأكد من وجود مساحة كافية على microSD", "اذهب لـ System Settings > System > System Update"] },
+        "2813-1502": { title: "بطاقة microSD تالفة / Corrupt microSD", steps: ["أخرج الـ microSD وأعد إدخالها", "جرب تهيئة الكارت (Format) تحذير: سيحذف كل شيء", "جرب microSD أخرى إذا استمرت المشكلة"] },
+      };
+
+      const dbMap: Record<string, ErrorDb> = { ps4: ps4db, ps5: ps5db, xbox: xboxdb, nintendo: nintendodb };
+      const platformNames: Record<string, string> = { ps4: "PlayStation 4", ps5: "PlayStation 5", xbox: "Xbox", nintendo: "Nintendo Switch" };
+      const platformColors: Record<string, number> = { ps4: 0x003087, ps5: 0x003791, xbox: 0x107c10, nintendo: 0xe4000f };
+
+      const db = dbMap[platform]!;
+      const entry = db[rawCode] ?? db[rawCode.replace(/-/g, "")] ?? null;
+
+      const embed = new EmbedBuilder()
+        .setColor(platformColors[platform]!)
+        .setTimestamp()
+        .setFooter({ text: `${platformNames[platform]} Error Helper • Bot_SUKz` });
+
+      if (!entry) {
+        embed
+          .setTitle(`❓ كود الخطأ غير موجود في قاعدة البيانات`)
+          .setDescription(`**الكود:** \`${rawCode}\`\n**الجهاز:** ${platformNames[platform]}\n\nلم يتم العثور على هذا الكود. جرب:`)
+          .addFields(
+            { name: "🔍 البحث اليدوي", value: platform === "ps4" || platform === "ps5" ? "[PlayStation Support](https://www.playstation.com/ar-sa/support/)" : platform === "xbox" ? "[Xbox Support](https://support.xbox.com/ar-SA/)" : "[Nintendo Support](https://www.nintendo.com/consumer/)" },
+            { name: "💡 تأكد من الكود", value: "تأكد من كتابة الكود بشكل صحيح مثل: `CE-34878-0` أو `E100`" },
+          );
+      } else {
+        embed
+          .setTitle(`🎮 ${entry.title}`)
+          .setDescription(`**الجهاز:** ${platformNames[platform]}\n**كود الخطأ:** \`${rawCode}\``)
+          .addFields({ name: "🔧 خطوات الحل / Fix Steps", value: entry.steps.map((s, i) => `**${i + 1}.** ${s}`).join("\n") });
+        if (entry.link) embed.addFields({ name: "🔗 رابط الدعم", value: entry.link });
+      }
+
+      await interaction.reply({ embeds: [embed] });
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
+      .setName("tiktok")
+      .setDescription("نصائح وأفكار تيك توك / TikTok tips and ideas")
+      .addStringOption(opt =>
+        opt.setName("type")
+          .setDescription("نوع المحتوى / Content type")
+          .setRequired(true)
+          .addChoices(
+            { name: "💡 أفكار فيديوهات / Video Ideas", value: "ideas" },
+            { name: "📈 نصائح للنمو / Growth Tips", value: "growth" },
+            { name: "🎵 اختيار الصوت / Sound Tips", value: "sound" },
+            { name: "⏰ أوقات النشر / Best Posting Times", value: "timing" },
+            { name: "🔥 هاشتاقات / Hashtags", value: "hashtags" },
+          )
+      ),
+    async execute(interaction: ChatInputCommandInteraction) {
+      const type = interaction.options.getString("type", true);
+
+      const content: Record<string, { title: string; emoji: string; color: number; items: string[] }> = {
+        ideas: {
+          title: "💡 أفكار فيديوهات تيك توك",
+          emoji: "💡",
+          color: 0xff0050,
+          items: [
+            "فيديو \"يوم في حياتي\" (Day in my life) — شعبية عالية دائماً",
+            "تحدي الطعام (Food Challenge) — حضر وصفة غريبة أو سريعة",
+            "Get Ready With Me (GRWM) — استعداد ليومك أو لحفلة",
+            "فيديو رد فعل على محتوى ترند حالياً",
+            "Before & After تحويل شيء قديم لجديد",
+            "POV فيديو — ضع نفسك في موقف ما",
+            "تعليم شيء في 60 ثانية (Did You Know)",
+            "فيديو مقارنة: توقعات vs الواقع",
+            "Storytime — قصة مثيرة أو مضحكة من حياتك",
+            "تحدي رقص على صوت ترند 🎵",
+          ],
+        },
+        growth: {
+          title: "📈 نصائح النمو على تيك توك",
+          emoji: "📈",
+          color: 0x25f4ee,
+          items: [
+            "انشر 1-3 فيديوهات يومياً باستمرار — الخوارزمية تكافح المنتظمين",
+            "أول 3 ثواني حاسمة — ابدأ بجملة تجذب الانتباه فوراً",
+            "استخدم الهاشتاقات الصحيحة: 3-5 هاشتاقات كبيرة + 3-5 صغيرة نيشية",
+            "رد على كل تعليق في أول ساعة — يزيد التفاعل للخوارزمية",
+            "الفيديوهات بين 7-30 ثانية تحصل على أعلى نسبة مشاهدة كاملة",
+            "استخدم Duet و Stitch مع محتوى ترند",
+            "ابدأ الفيديو بسؤال أو مشهد مثير — لا تقدمة",
+            "أضف نص/كابشن في الفيديو — كثير يشاهدون بدون صوت",
+            "اتابع Analytics وشوف أي فيديو نجح وكرره",
+            "تعاون مع كريتورز في نفس المجال (Collab)",
+          ],
+        },
+        sound: {
+          title: "🎵 نصائح اختيار الصوت",
+          emoji: "🎵",
+          color: 0xff0050,
+          items: [
+            "استخدم الأصوات الترند — الخوارزمية تدفع الفيديوهات على الصوت الواحد",
+            "اذهب لـ Discover وشوف الأصوات الترند الآن",
+            "الأصوات الصاعدة (Rising) أفضل من المشهورة جداً — منافسة أقل",
+            "إذا صنعت صوت أصلي، شجع المتابعين على استخدامه",
+            "الأغاني العربية الترند تعطيك reach أكبر في الجمهور العربي",
+            "اختر صوت يناسب إيقاع فيديوك — لا تفرض صوت على محتوى لا يناسبه",
+            "الأصوات الكوميدية والميمز تزيد المشاركة",
+          ],
+        },
+        timing: {
+          title: "⏰ أفضل أوقات النشر على تيك توك",
+          emoji: "⏰",
+          color: 0x25f4ee,
+          items: [
+            "**الصباح:** 6-9 صباحاً — الناس يشوفون تيك توك قبل الشغل/المدرسة",
+            "**الظهر:** 12-2 ظهراً — استراحة الغداء",
+            "**المساء:** 7-9 مساءً — أعلى وقت تفاعل ⭐",
+            "**الليل:** 10-11 مساءً — ثاني أعلى وقت",
+            "**يوم الجمعة والسبت** أعلى أيام التفاعل للجمهور العربي",
+            "تحقق من Analytics في حسابك لتعرف متى جمهورك نشيط تحديداً",
+            "لا تنشر أكثر من 3 فيديوهات في يوم واحد — يخفض الـ reach",
+          ],
+        },
+        hashtags: {
+          title: "🔥 هاشتاقات تيك توك الفعّالة",
+          emoji: "🔥",
+          color: 0xff0050,
+          items: [
+            "**عربي عام:** #تيك_توك #fyp #foryou #اكسبلور #viral",
+            "**نمو:** #tiktokarab #عرب_تيك_توك #محتوى_عربي #مشاهير_تيك_توك",
+            "**ترفيه:** #كوميدي #ضحك #تحديات #ترند",
+            "**ألعاب:** #gaming #جيمينج #games #PS5 #Xbox",
+            "**تعليم:** #تعلم #معلومة #didyouknow #تثقيف",
+            "**نصيحة الهاشتاقات:** لا تستخدم أكثر من 5-7 — أكثر منها يضر",
+            "اخلط هاشتاقات كبيرة (ملايين) + صغيرة (آلاف) للوصول الأمثل",
+          ],
+        },
+      };
+
+      const c = content[type]!;
+      const embed = new EmbedBuilder()
+        .setTitle(c.title)
+        .setColor(c.color)
+        .setDescription(c.items.map((item, i) => `${i + 1}. ${item}`).join("\n"))
+        .setFooter({ text: "TikTok Tips • Bot_SUKz" })
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+    },
+  },
 ];
