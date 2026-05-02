@@ -194,6 +194,7 @@ export const extraCommands = [
           .setDescription("اختر الجهاز / Choose your console")
           .setRequired(true)
           .addChoices(
+            { name: "PlayStation 3 (PS3)", value: "ps3" },
             { name: "PlayStation 4 (PS4)", value: "ps4" },
             { name: "PlayStation 5 (PS5)", value: "ps5" },
             { name: "Xbox One / Series", value: "xbox" },
@@ -210,6 +211,23 @@ export const extraCommands = [
       const rawCode = interaction.options.getString("code", true).trim().toUpperCase();
 
       type ErrorDb = Record<string, { title: string; steps: string[]; link?: string }>;
+
+      const ps3db: ErrorDb = {
+        "8001050F": { title: "خطأ الشبكة العام / General Network Error", steps: ["تحقق من اتصال الإنترنت", "اذهب لـ Settings > Network Settings > Internet Connection Test", "أعد تشغيل الراوتر", "تأكد أن PSN ما عنده صيانة: status.playstation.com"] },
+        "80010017": { title: "فشل تشغيل اللعبة / Game Launch Failed", steps: ["أعد تشغيل PS3", "احذف ملف اللعبة المؤقت من Game Data Utility", "أعد تثبيت اللعبة من القرص", "تحقق من أن القرص غير مخدوش"] },
+        "80029564": { title: "فشل تثبيت التحديث / Update Install Failed", steps: ["احذف ملف التحديث من Game Data Utility", "نزّل التحديث مجدداً", "جرب التحديث عبر USB", "تأكد من وجود مساحة كافية على الهارد"] },
+        "80130203": { title: "انقطع الاتصال بـ PSN / PSN Disconnected", steps: ["تحقق من كلمة مرور PSN", "اذهب لـ Settings > Network Settings وأعد الإعداد", "جرب DNS يدوي: Primary 8.8.8.8 / Secondary 8.8.4.4", "تأكد أن جدار الحماية لا يحجب PS3"] },
+        "80710102": { title: "مشكلة الاتصال بـ PSN / Cannot Connect to PSN", steps: ["تحقق من إعدادات الشبكة", "جرب كابل LAN بدلاً من WiFi", "غيّر DNS لـ 8.8.8.8 (Google DNS)", "أعد تشغيل PS3 والراوتر معاً"] },
+        "80710016": { title: "PSN تحت الصيانة / PSN Under Maintenance", steps: ["تحقق من حالة PSN: status.playstation.com", "انتظر انتهاء الصيانة", "حاول مجدداً بعد ساعة"] },
+        "80010514": { title: "تعطل اللعبة / Game Crashed", steps: ["أعد تشغيل اللعبة", "احذف بيانات اللعبة المؤقتة", "أعد بناء قاعدة البيانات: Safe Mode > Rebuild Database", "أعد تثبيت اللعبة"] },
+        "8002A10D": { title: "مشكلة حساب PSN / PSN Account Error", steps: ["سجل خروج وأعد تسجيل الدخول", "تحقق من أن الاشتراك ما انتهى", "اذهب لـ playstation.com وتحقق من الحساب"] },
+        "80028F10": { title: "خطأ القرص / Disc Error", steps: ["نظّف القرص بقطعة قماش ناعمة من المركز للخارج", "تحقق من أن القرص ليس مخدوشاً", "جرب قرصاً آخر للتأكد أن المشكلة في القرص أو الجهاز", "إذا كانت جميع الأقراص تعطي نفس الخطأ، مشكلة في قارئ الأقراص"] },
+        "80010038": { title: "مشكلة في الهارد ديسك / HDD Error", steps: ["اذهب لـ Safe Mode > Check File System", "جرب Restore File System", "إذا استمر: Restore PS3 System (تحذير: يحذف كل البيانات)", "استبدل الهارد ديسك إذا كان تالفاً"] },
+        "8002B241": { title: "DRM / محتوى مقيّد / Content Locked", steps: ["تأكد أنك مسجل بنفس حساب PSN الذي اشترى المحتوى", "فعّل PS3 كـ Primary Console لحسابك", "اذهب لـ PSN > Account Management > Activate as Primary PS3"] },
+        "80023017": { title: "مشكلة متجر PlayStation / PlayStation Store Error", steps: ["أعد تشغيل PS3", "امسح بيانات المتصفح: Network > Clear Cookies", "سجل خروج وادخل مجدداً للمتجر", "تحقق من حالة PSN"] },
+        "YELLOW LIGHT": { title: "ضوء أصفر / Yellow Light of Death (YLOD)", steps: ["هذه مشكلة هاردوير خطيرة (ارتفاع حرارة أو تلف اللحام)", "افصل PS3 تماماً لمدة 30 دقيقة", "تأكد من تهوية الجهاز ونظافة مروحته", "قد تحتاج لإرسال الجهاز للإصلاح أو استبدال المعجون الحراري"] },
+        "BLINKING RED": { title: "ضوء أحمر وامض / Blinking Red Light", steps: ["ارتفاع حرارة شديد — أوقف الجهاز فوراً", "تأكد من وجود تهوية كافية حول PS3", "نظّف مروحة PS3 من الغبار", "أعد تشغيل بعد 30 دقيقة في مكان بارد"] },
+      };
 
       const ps4db: ErrorDb = {
         "CE-34878-0": { title: "تعطل التطبيق / Application Crashed", steps: ["أعد تشغيل اللعبة", "احذف ملفات الحفظ التالفة من الإعدادات", "أعد تثبيت اللعبة", "تحديث نظام PS4 لآخر إصدار"] },
@@ -248,9 +266,9 @@ export const extraCommands = [
         "2813-1502": { title: "بطاقة microSD تالفة / Corrupt microSD", steps: ["أخرج الـ microSD وأعد إدخالها", "جرب تهيئة الكارت (Format) تحذير: سيحذف كل شيء", "جرب microSD أخرى إذا استمرت المشكلة"] },
       };
 
-      const dbMap: Record<string, ErrorDb> = { ps4: ps4db, ps5: ps5db, xbox: xboxdb, nintendo: nintendodb };
-      const platformNames: Record<string, string> = { ps4: "PlayStation 4", ps5: "PlayStation 5", xbox: "Xbox", nintendo: "Nintendo Switch" };
-      const platformColors: Record<string, number> = { ps4: 0x003087, ps5: 0x003791, xbox: 0x107c10, nintendo: 0xe4000f };
+      const dbMap: Record<string, ErrorDb> = { ps3: ps3db, ps4: ps4db, ps5: ps5db, xbox: xboxdb, nintendo: nintendodb };
+      const platformNames: Record<string, string> = { ps3: "PlayStation 3", ps4: "PlayStation 4", ps5: "PlayStation 5", xbox: "Xbox", nintendo: "Nintendo Switch" };
+      const platformColors: Record<string, number> = { ps3: 0x003791, ps4: 0x003087, ps5: 0x00439c, xbox: 0x107c10, nintendo: 0xe4000f };
 
       const db = dbMap[platform]!;
       const entry = db[rawCode] ?? db[rawCode.replace(/-/g, "")] ?? null;
@@ -265,7 +283,7 @@ export const extraCommands = [
           .setTitle(`❓ كود الخطأ غير موجود في قاعدة البيانات`)
           .setDescription(`**الكود:** \`${rawCode}\`\n**الجهاز:** ${platformNames[platform]}\n\nلم يتم العثور على هذا الكود. جرب:`)
           .addFields(
-            { name: "🔍 البحث اليدوي", value: platform === "ps4" || platform === "ps5" ? "[PlayStation Support](https://www.playstation.com/ar-sa/support/)" : platform === "xbox" ? "[Xbox Support](https://support.xbox.com/ar-SA/)" : "[Nintendo Support](https://www.nintendo.com/consumer/)" },
+            { name: "🔍 البحث اليدوي", value: ["ps3","ps4","ps5"].includes(platform) ? "[PlayStation Support](https://www.playstation.com/ar-sa/support/)" : platform === "xbox" ? "[Xbox Support](https://support.xbox.com/ar-SA/)" : "[Nintendo Support](https://www.nintendo.com/consumer/)" },
             { name: "💡 تأكد من الكود", value: "تأكد من كتابة الكود بشكل صحيح مثل: `CE-34878-0` أو `E100`" },
           );
       } else {
