@@ -119,5 +119,4 @@ export const socialCommands = [
       await interaction.reply(`**${interaction.user.username}** kisses **${target.username}**! 💋`);
     },
   },
-  },
 ];
