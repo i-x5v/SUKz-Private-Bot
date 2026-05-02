@@ -65,12 +65,33 @@ export async function startBot(): Promise<void> {
   client.once(Events.ClientReady, async (readyClient) => {
     logger.info({ tag: readyClient.user.tag, commands: commands.size, mode: isProduction ? "production" : "development" }, "Discord bot is ready!");
 
-    readyClient.user.setPresence({
-      activities: [{ name: "اسألني أي شيء /ask", type: ActivityType.Watching }],
-      status: "online",
-    });
+    const statusMessages = [
+      { name: "/ask — اسألني أي شيء 🤖", type: ActivityType.Watching },
+      { name: "/ticket — افتح تذكرة دعم 🎫", type: ActivityType.Watching },
+      { name: "/console — حل مشاكل الكونسل 🎮", type: ActivityType.Watching },
+      { name: "/adhkar — أذكار إسلامية 📿", type: ActivityType.Watching },
+      { name: "/trivia — سؤال ثقافي 🧠", type: ActivityType.Watching },
+      { name: "/poll — صوّت مع السيرفر 📊", type: ActivityType.Watching },
+      { name: `${commands.size} أمر جاهزة لك ⚡`, type: ActivityType.Playing },
+    ];
+    let statusIndex = 0;
+    const updateStatus = () => {
+      const s = statusMessages[statusIndex % statusMessages.length]!;
+      readyClient.user.setPresence({ activities: [s], status: "online" });
+      statusIndex++;
+    };
+    updateStatus();
+    setInterval(updateStatus, 15_000);
 
     const rest = new REST().setToken(token);
+
+    try {
+      await rest.patch(Routes.currentApplication(), {
+        body: {
+          description: "بوت SUKz — بوت عربي متكامل 🇸🇦\n\n🤖 /ask — ذكاء اصطناعي\n🎫 /ticket — نظام تذاكر\n🎮 /console — حل مشاكل الكونسل\n📿 /adhkar — أذكار إسلامية\n🧠 /trivia — أسئلة ثقافية\n⚡ 99 أمر جاهز!",
+        },
+      });
+    } catch { /* ignore if no permission */ }
     const commandBodies = allCommands.map(cmd => cmd.data.toJSON());
 
     if (isProduction) {
