@@ -4,11 +4,13 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json ./
 
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --no-frozen-lockfile
 
-COPY dist/ ./dist/
+COPY . .
+
+RUN pnpm run build
 
 ENV NODE_ENV=production
 ENV PORT=8080

@@ -31,6 +31,8 @@ const allCommands: Command[] = [
   ...extraCommands,
 ];
 
+const isProduction = process.env["NODE_ENV"] === "production";
+
 export async function startBot(): Promise<void> {
   const token = process.env["DISCORD_BOT_TOKEN"];
   if (!token) {
@@ -46,6 +48,8 @@ export async function startBot(): Promise<void> {
       GatewayIntentBits.MessageContent,
       GatewayIntentBits.GuildVoiceStates,
       GatewayIntentBits.GuildMessageReactions,
+      GatewayIntentBits.DirectMessages,
+      GatewayIntentBits.GuildPresences,
     ],
   });
 
@@ -55,7 +59,7 @@ export async function startBot(): Promise<void> {
   }
 
   client.once(Events.ClientReady, async (readyClient) => {
-    logger.info({ tag: readyClient.user.tag, commands: commands.size }, "Discord bot is ready!");
+    logger.info({ tag: readyClient.user.tag, commands: commands.size, mode: isProduction ? "production" : "development" }, "Discord bot is ready!");
 
     readyClient.user.setPresence({
       activities: [{ name: "For help /help", type: ActivityType.Watching }],
@@ -65,20 +69,33 @@ export async function startBot(): Promise<void> {
     const rest = new REST().setToken(token);
     const commandBodies = allCommands.map(cmd => cmd.data.toJSON());
 
-    // Register as guild commands for each server (no limit vs global 100 limit)
-    const guilds = readyClient.guilds.cache;
-    if (guilds.size === 0) {
-      logger.warn("Bot is not in any guilds — commands not registered yet. Invite the bot to a server.");
-    }
-    for (const [guildId, guild] of guilds) {
+    if (isProduction) {
+      // Production (Railway etc.): register as global commands — work in all servers
       try {
         await rest.put(
-          Routes.applicationGuildCommands(readyClient.user.id, guildId),
+          Routes.applicationCommands(readyClient.user.id),
           { body: commandBodies },
         );
-        logger.info({ guild: guild.name, count: commandBodies.length }, "Guild commands registered!");
+        logger.info({ count: commandBodies.length }, "Global commands registered! (may take up to 1 hour to appear)");
       } catch (err) {
-        logger.error({ err, guild: guild.name }, "Failed to register guild commands");
+        logger.error({ err }, "Failed to register global commands");
+      }
+    } else {
+      // Development (Replit): register as guild commands per server — instant
+      const guilds = readyClient.guilds.cache;
+      if (guilds.size === 0) {
+        logger.warn("Bot is not in any guilds — commands not registered yet. Invite the bot to a server.");
+      }
+      for (const [guildId, guild] of guilds) {
+        try {
+          await rest.put(
+            Routes.applicationGuildCommands(readyClient.user.id, guildId),
+            { body: commandBodies },
+          );
+          logger.info({ guild: guild.name, count: commandBodies.length }, "Guild commands registered!");
+        } catch (err) {
+          logger.error({ err, guild: guild.name }, "Failed to register guild commands");
+        }
       }
     }
   });
