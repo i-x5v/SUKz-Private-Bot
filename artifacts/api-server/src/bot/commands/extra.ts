@@ -6,7 +6,10 @@ const geminiApiKey = process.env["AI_INTEGRATIONS_GEMINI_API_KEY"] ?? process.en
 
 const geminiClient = new GoogleGenAI({
   apiKey: geminiApiKey,
-  ...(geminiBaseUrl ? { baseURL: geminiBaseUrl } : {}),
+  httpOptions: {
+    apiVersion: "",
+    ...(geminiBaseUrl ? { baseUrl: geminiBaseUrl } : {}),
+  },
 });
 
 const xpData = new Map<string, number>();
