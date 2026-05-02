@@ -1,9 +1,12 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 import OpenAI from "openai";
 
+const aiBaseUrl = process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"];
+const aiApiKey = process.env["AI_INTEGRATIONS_OPENAI_API_KEY"] ?? process.env["OPENAI_API_KEY"] ?? "no-key";
+
 const openaiClient = new OpenAI({
-  baseURL: process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"],
-  apiKey: process.env["AI_INTEGRATIONS_OPENAI_API_KEY"] ?? process.env["OPENAI_API_KEY"] ?? "no-key",
+  ...(aiBaseUrl ? { baseURL: aiBaseUrl } : {}),
+  apiKey: aiApiKey,
 });
 
 const xpData = new Map<string, number>();
@@ -146,12 +149,12 @@ export const extraCommands = [
       ),
     async execute(interaction: ChatInputCommandInteraction) {
       const userMessage = interaction.options.getString("message", true);
-      await interaction.deferReply();
+      try { await interaction.deferReply(); } catch { return; }
 
       try {
         const response = await openaiClient.chat.completions.create({
           model: "gpt-4o-mini",
-          max_tokens: 1024,
+          max_completion_tokens: 1024,
           messages: [
             {
               role: "system",
@@ -174,8 +177,10 @@ export const extraCommands = [
           .setTimestamp();
 
         await interaction.editReply({ embeds: [embed] });
-      } catch {
-        await interaction.editReply({ content: "❌ حدث خطأ أثناء التواصل مع الذكاء الاصطناعي، حاول لاحقاً." });
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error("[/chat error]", errMsg);
+        await interaction.editReply({ content: `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\`` });
       }
     },
   },
