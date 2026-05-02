@@ -2,7 +2,11 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startBot } from "./bot/index";
 
-startBot().catch(err => logger.error({ err }, "Bot failed to start"));
+if (process.env["BOT_DISABLED"] !== "true") {
+  startBot().catch(err => logger.error({ err }, "Bot failed to start"));
+} else {
+  logger.info("Bot is disabled on this instance (BOT_DISABLED=true) — Railway handles the bot");
+}
 
 const rawPort = process.env["PORT"];
 
