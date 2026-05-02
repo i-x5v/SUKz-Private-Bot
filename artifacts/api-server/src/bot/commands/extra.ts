@@ -1,4 +1,10 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
+import OpenAI from "openai";
+
+const openaiClient = new OpenAI({
+  baseURL: process.env["AI_INTEGRATIONS_OPENAI_BASE_URL"],
+  apiKey: process.env["AI_INTEGRATIONS_OPENAI_API_KEY"] ?? process.env["OPENAI_API_KEY"] ?? "no-key",
+});
 
 const xpData = new Map<string, number>();
 const levels = new Map<string, number>();
@@ -131,14 +137,46 @@ export const extraCommands = [
   },
   {
     data: new SlashCommandBuilder()
-      .setName("rate")
-      .setDescription("Rate something out of 10")
-      .addStringOption(opt => opt.setName("thing").setDescription("What to rate").setRequired(true)),
+      .setName("chat")
+      .setDescription("سوالف مع الذكاء الاصطناعي / Chat with AI")
+      .addStringOption(opt =>
+        opt.setName("message")
+          .setDescription("رسالتك للذكاء الاصطناعي / Your message to AI")
+          .setRequired(true)
+      ),
     async execute(interaction: ChatInputCommandInteraction) {
-      const thing = interaction.options.getString("thing", true);
-      const rating = Math.floor(Math.random() * 11);
-      const bar = "█".repeat(rating) + "░".repeat(10 - rating);
-      await interaction.reply(`⭐ **${thing}**\nRating: \`${bar}\` **${rating}/10**`);
+      const userMessage = interaction.options.getString("message", true);
+      await interaction.deferReply();
+
+      try {
+        const response = await openaiClient.chat.completions.create({
+          model: "gpt-4o-mini",
+          max_tokens: 1024,
+          messages: [
+            {
+              role: "system",
+              content: "أنت مساعد ذكي ومفيد في سيرفر ديسكورد. رد بشكل مختصر وواضح. إذا كان السؤال بالعربي رد بالعربي، وإذا كان بالإنجليزي رد بالإنجليزي.",
+            },
+            { role: "user", content: userMessage },
+          ],
+        });
+
+        const aiReply = response.choices[0]?.message?.content ?? "لم أتمكن من الرد، حاول مرة ثانية.";
+
+        const embed = new EmbedBuilder()
+          .setColor(0x5865f2)
+          .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
+          .addFields(
+            { name: "💬 رسالتك", value: userMessage.slice(0, 1024) },
+            { name: "🤖 الذكاء الاصطناعي", value: aiReply.slice(0, 1024) },
+          )
+          .setFooter({ text: "Powered by AI • Bot_SUKz" })
+          .setTimestamp();
+
+        await interaction.editReply({ embeds: [embed] });
+      } catch {
+        await interaction.editReply({ content: "❌ حدث خطأ أثناء التواصل مع الذكاء الاصطناعي، حاول لاحقاً." });
+      }
     },
   },
   {
