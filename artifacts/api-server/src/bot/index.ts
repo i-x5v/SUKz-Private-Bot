@@ -105,21 +105,29 @@ export async function startBot(): Promise<void> {
 
     const command = commands.get(interaction.commandName);
     if (!command) {
-      await interaction.reply({ content: "❌ Unknown command!", ephemeral: true });
+      try { await interaction.reply({ content: "❌ Unknown command!", flags: 64 }); } catch { /* expired */ }
       return;
     }
 
     try {
       await command.execute(interaction);
     } catch (err) {
+      // Ignore "Unknown interaction" (10062) — another bot instance already responded
+      if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 10062) return;
       logger.error({ err, command: interaction.commandName }, "Error executing command");
-      const errorMsg = { content: "❌ An error occurred while executing this command!", ephemeral: true };
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(errorMsg);
-      } else {
-        await interaction.reply(errorMsg);
-      }
+      try {
+        const errorMsg = { content: "❌ An error occurred while executing this command!", flags: 64 };
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp(errorMsg);
+        } else {
+          await interaction.reply(errorMsg);
+        }
+      } catch { /* interaction expired */ }
     }
+  });
+
+  client.on("error", (err) => {
+    logger.error({ err }, "Discord client error");
   });
 
   client.on(Events.GuildMemberAdd, async (member) => {
