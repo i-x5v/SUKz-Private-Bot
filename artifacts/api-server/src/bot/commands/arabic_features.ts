@@ -1,0 +1,323 @@
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, TextChannel } from "discord.js";
+import { GoogleGenAI } from "@google/genai";
+
+const geminiBaseUrl = process.env["AI_INTEGRATIONS_GEMINI_BASE_URL"];
+const geminiApiKey = process.env["AI_INTEGRATIONS_GEMINI_API_KEY"] ?? process.env["GEMINI_API_KEY"] ?? "no-key";
+
+const geminiClient = new GoogleGenAI({
+  apiKey: geminiApiKey,
+  httpOptions: {
+    apiVersion: "",
+    ...(geminiBaseUrl ? { baseUrl: geminiBaseUrl } : {}),
+  },
+});
+
+const adhkarSchedulers = new Map<string, ReturnType<typeof setInterval>>();
+
+const adhkarList = [
+  { text: "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ", count: "100x يومياً تُحطّ الخطايا وإن كانت مثل زبد البحر" },
+  { text: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ", count: "100x يومياً تعدل عشر رقاب وتُكتب 100 حسنة" },
+  { text: "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ", count: "من صلى عليه مرة صلى الله عليه بها عشراً" },
+  { text: "أَسْتَغْفِرُ اللَّهَ الْعَظِيمَ الَّذِي لَا إِلَهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ وَأَتُوبُ إِلَيْهِ", count: "الاستغفار يفتح أبواب الرزق والرحمة" },
+  { text: "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ الْعَلِيِّ الْعَظِيمِ", count: "كنز من كنوز الجنة — من قالها 100 مرة أُجير من 99 داء" },
+  { text: "سُبْحَانَ اللَّهِ وَالْحَمْدُ لِلَّهِ وَلَا إِلَهَ إِلَّا اللَّهُ وَاللَّهُ أَكْبَرُ", count: "أحب الكلام إلى الله وأثقله في الميزان" },
+  { text: "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", count: "من أجمع أدعية القرآن الكريم" },
+  { text: "اللَّهُمَّ إِنِّي أَسْأَلُكَ الْجَنَّةَ وَأَعُوذُ بِكَ مِنَ النَّارِ", count: "من سأل الجنة ثلاث مرات قالت الجنة: اللهم أدخله الجنة" },
+  { text: "حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ", count: "قالها إبراهيم حين أُلقي في النار وقالها محمد ﷺ حين قيل له: إن الناس قد جمعوا لكم" },
+  { text: "يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغِيثُ أَصْلِحْ لِي شَأْنِي كُلَّهُ وَلَا تَكِلْنِي إِلَى نَفْسِي طَرْفَةَ عَيْنٍ", count: "دعاء عظيم للفرج وإصلاح الأحوال" },
+  { text: "اللَّهُمَّ أَنْتَ السَّلَامُ وَمِنْكَ السَّلَامُ تَبَارَكْتَ يَا ذَا الْجَلَالِ وَالْإِكْرَامِ", count: "ذكر ما بعد الصلاة" },
+  { text: "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ", count: "من قالها 3 مرات صباحاً ومساءً لم يصبه ضر" },
+  { text: "اللَّهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ", count: "ذكر الصباح" },
+  { text: "اللَّهُمَّ اغْفِرْ لِي وَلِوَالِدَيَّ وَلِجَمِيعِ الْمُسْلِمِينَ وَالْمُسْلِمَاتِ", count: "دعاء شامل للمؤمنين" },
+  { text: "رَضِيتُ بِاللَّهِ رَبًّا وَبِالْإِسْلَامِ دِيناً وَبِمُحَمَّدٍ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ نَبِيًّا", count: "من قالها 3 مرات وجبت له الجنة" },
+];
+
+function buildAdhkarEmbed() {
+  const item = adhkarList[Math.floor(Math.random() * adhkarList.length)]!;
+  const colors = [0x1a5276, 0x1e8449, 0x7d3c98, 0x117a65, 0x922b21];
+  const color = colors[Math.floor(Math.random() * colors.length)]!;
+  return new EmbedBuilder()
+    .setTitle("📿 ذكر الله — تذكر")
+    .setDescription(`\`\`\`\n${item.text}\n\`\`\``)
+    .addFields({ name: "✨ الفضل", value: item.count })
+    .setColor(color)
+    .setFooter({ text: "وَالذَّاكِرِينَ اللَّهَ كَثِيرًا وَالذَّاكِرَاتِ أَعَدَّ اللَّهُ لَهُم مَّغْفِرَةً وَأَجْرًا عَظِيمًا • Bot_SUKz" })
+    .setTimestamp();
+}
+
+const triviaQuestions = [
+  { q: "ما هي عاصمة المملكة العربية السعودية؟", a: "الرياض", choices: ["جدة", "الرياض", "مكة المكرمة", "الدمام"] },
+  { q: "كم عدد سور القرآن الكريم؟", a: "114", choices: ["112", "113", "114", "116"] },
+  { q: "ما هو أكبر كوكب في المجموعة الشمسية؟", a: "المشتري", choices: ["زحل", "المشتري", "أورانوس", "نبتون"] },
+  { q: "ما هو أطول نهر في العالم؟", a: "نهر النيل", choices: ["الأمازون", "نهر النيل", "نهر الكونغو", "نهر الفولغا"] },
+  { q: "كم عدد لاعبي كرة القدم في الملعب لكل فريق؟", a: "11", choices: ["9", "10", "11", "12"] },
+  { q: "في أي دولة يقع برج إيفل؟", a: "فرنسا", choices: ["إيطاليا", "إسبانيا", "فرنسا", "بلجيكا"] },
+  { q: "ما هو أصغر دولة في العالم مساحةً؟", a: "الفاتيكان", choices: ["موناكو", "سان مارينو", "الفاتيكان", "ليختنشتاين"] },
+  { q: "ما هو لقب النبي إبراهيم عليه السلام؟", a: "خليل الرحمن", choices: ["روح الله", "كليم الله", "خليل الرحمن", "نجي الله"] },
+  { q: "كم عدد ركائز الإسلام؟", a: "5", choices: ["3", "4", "5", "6"] },
+  { q: "ما هو أسرع حيوان بري في العالم؟", a: "الفهد", choices: ["الأسد", "الفهد", "الغزال", "الحصان"] },
+  { q: "ما هي لغة البرمجة التي طوّرها جيمس غوسلينج؟", a: "Java", choices: ["Python", "C++", "Java", "Ruby"] },
+  { q: "كم عدد قارات العالم؟", a: "7", choices: ["5", "6", "7", "8"] },
+];
+
+const activeGuessGames = new Map<string, { number: number; attempts: number }>();
+
+export const arabicFeaturesCommands = [
+  {
+    data: new SlashCommandBuilder()
+      .setName("ask")
+      .setDescription("اسأل الذكاء الاصطناعي أي سؤال / Ask AI anything")
+      .addStringOption(opt =>
+        opt.setName("question")
+          .setDescription("سؤالك / Your question")
+          .setRequired(true)
+      ),
+    async execute(interaction: ChatInputCommandInteraction) {
+      const question = interaction.options.getString("question", true);
+      try { await interaction.deferReply(); } catch { return; }
+      try {
+        const response = await geminiClient.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ role: "user", parts: [{ text: question }] }],
+          config: {
+            systemInstruction: `أنت مساعد ذكي ومتعدد المجالات في سيرفر ديسكورد.
+- إذا كان السؤال بالعربية: أجب بالعربية
+- إذا كان السؤال بالإنجليزية: أجب بالإنجليزية
+- أجب بشكل مختصر ودقيق ومفيد (لا تتجاوز 400 كلمة)
+- قدم الحقائق العلمية بدقة ووضوح`,
+            maxOutputTokens: 1500,
+          },
+        });
+        const aiReply = response.text ?? "عذراً، لم أتمكن من الإجابة. حاول مرة أخرى.";
+        const embed = new EmbedBuilder()
+          .setTitle("🤖 الذكاء الاصطناعي يجيب")
+          .setColor(0x5865f2)
+          .addFields(
+            { name: "❓ السؤال", value: question.slice(0, 1024) },
+            { name: "✅ الإجابة", value: aiReply.slice(0, 1024) },
+          )
+          .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
+          .setFooter({ text: "Powered by Gemini AI • Bot_SUKz" })
+          .setTimestamp();
+        await interaction.editReply({ embeds: [embed] });
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        await interaction.editReply({ content: `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\`` });
+      }
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
+      .setName("adhkar")
+      .setDescription("أذكار إسلامية / Islamic Dhikr")
+      .addStringOption(opt =>
+        opt.setName("action")
+          .setDescription("اختر الإجراء")
+          .setRequired(true)
+          .addChoices(
+            { name: "📿 أرسل ذكراً الآن", value: "now" },
+            { name: "⏰ تلقائي كل ساعة", value: "hourly" },
+            { name: "🌅 تلقائي كل يوم", value: "daily" },
+            { name: "🛑 إيقاف التلقائي", value: "stop" },
+          )
+      ),
+    async execute(interaction: ChatInputCommandInteraction) {
+      const action = interaction.options.getString("action", true);
+      const channelId = interaction.channelId;
+      const channel = interaction.channel;
+
+      if (action === "now") {
+        await interaction.reply({ embeds: [buildAdhkarEmbed()] });
+        return;
+      }
+      if (action === "stop") {
+        const existing = adhkarSchedulers.get(channelId);
+        if (existing) {
+          clearInterval(existing);
+          adhkarSchedulers.delete(channelId);
+          await interaction.reply({ content: "🛑 تم إيقاف الأذكار التلقائية في هذه القناة.", ephemeral: true });
+        } else {
+          await interaction.reply({ content: "❌ لا يوجد أذكار تلقائية مفعّلة في هذه القناة.", ephemeral: true });
+        }
+        return;
+      }
+      const existing = adhkarSchedulers.get(channelId);
+      if (existing) { clearInterval(existing); adhkarSchedulers.delete(channelId); }
+
+      const intervalMs = action === "hourly" ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+      const label = action === "hourly" ? "كل ساعة ⏰" : "كل يوم 🌅";
+
+      const timer = setInterval(async () => {
+        try {
+          if (channel && "send" in channel) {
+            await (channel as TextChannel).send({ embeds: [buildAdhkarEmbed()] });
+          }
+        } catch { clearInterval(timer); adhkarSchedulers.delete(channelId); }
+      }, intervalMs);
+      adhkarSchedulers.set(channelId, timer);
+
+      await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("✅ تم تفعيل الأذكار التلقائية")
+            .setDescription(`سيتم إرسال ذكر جديد **${label}** في هذه القناة إن شاء الله 🤲\n\nاستخدم \`/adhkar stop\` لإيقاف الأذكار التلقائية`)
+            .setColor(0x1e8449)
+            .setTimestamp()
+        ],
+      });
+      setTimeout(async () => {
+        try { if (channel && "send" in channel) await (channel as TextChannel).send({ embeds: [buildAdhkarEmbed()] }); } catch { /* ignored */ }
+      }, 2000);
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
+      .setName("trivia")
+      .setDescription("سؤال ثقافي / Trivia Question"),
+    async execute(interaction: ChatInputCommandInteraction) {
+      const q = triviaQuestions[Math.floor(Math.random() * triviaQuestions.length)]!;
+      const shuffled = [...q.choices].sort(() => Math.random() - 0.5);
+      const letters = ["🇦", "🇧", "🇨", "🇩"];
+      const choicesText = shuffled.map((c, i) => `${letters[i]} **${c}**`).join("\n");
+      const correctIndex = shuffled.indexOf(q.a);
+      const correctLetter = letters[correctIndex];
+      const embed = new EmbedBuilder()
+        .setTitle("🧠 سؤال ثقافي")
+        .setDescription(`**${q.q}**\n\n${choicesText}`)
+        .setColor(0x9b59b6)
+        .setFooter({ text: "الإجابة ستظهر بعد 15 ثانية • Bot_SUKz" })
+        .setTimestamp();
+      await interaction.reply({ embeds: [embed] });
+      setTimeout(async () => {
+        const answerEmbed = new EmbedBuilder()
+          .setTitle("✅ الإجابة الصحيحة!")
+          .setDescription(`${correctLetter} **${q.a}**`)
+          .setColor(0x2ecc71);
+        try { await interaction.followUp({ embeds: [answerEmbed] }); } catch { /* ignored */ }
+      }, 15000);
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
+      .setName("guess")
+      .setDescription("خمن الرقم / Guess the number (1-100)")
+      .addIntegerOption(opt =>
+        opt.setName("number")
+          .setDescription("خمن رقماً بين 1 و 100 — اتركه فارغاً لتبدأ لعبة جديدة")
+          .setMinValue(1)
+          .setMaxValue(100)
+      ),
+    async execute(interaction: ChatInputCommandInteraction) {
+      const userId = interaction.user.id;
+      const guess = interaction.options.getInteger("number");
+      if (!guess) {
+        const number = Math.floor(Math.random() * 100) + 1;
+        activeGuessGames.set(userId, { number, attempts: 0 });
+        await interaction.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle("🔢 لعبة خمن الرقم!")
+              .setDescription("فكرت برقم بين **1 و 100**\nاستخدم `/guess number:<رقمك>` لتخمن!\n\nلديك **7 محاولات** فقط 😈")
+              .setColor(0x3498db)
+              .setFooter({ text: `${interaction.user.username} • Bot_SUKz` })
+          ]
+        });
+        return;
+      }
+      const game = activeGuessGames.get(userId);
+      if (!game) {
+        await interaction.reply({ content: "❌ ما عندك لعبة نشطة! استخدم `/guess` بدون رقم لتبدأ.", ephemeral: true });
+        return;
+      }
+      game.attempts++;
+      if (guess === game.number) {
+        activeGuessGames.delete(userId);
+        const stars = game.attempts <= 3 ? "🌟🌟🌟" : game.attempts <= 5 ? "⭐⭐" : "⭐";
+        await interaction.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle("🎉 صحيح! ربحت!")
+              .setDescription(`الرقم كان **${game.number}** وخمنته في **${game.attempts}** محاولة! ${stars}`)
+              .setColor(0x2ecc71)
+          ]
+        });
+      } else if (game.attempts >= 7) {
+        activeGuessGames.delete(userId);
+        await interaction.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle("😢 خسرت!")
+              .setDescription(`الرقم كان **${game.number}**\nخلصت محاولاتك! استخدم \`/guess\` لتحاول مجدداً`)
+              .setColor(0xe74c3c)
+          ]
+        });
+      } else {
+        const hint = guess < game.number ? "📈 أكبر! الرقم أكبر من تخمينك" : "📉 أصغر! الرقم أصغر من تخمينك";
+        const remaining = 7 - game.attempts;
+        const bar = "🟩".repeat(game.attempts) + "⬜".repeat(7 - game.attempts);
+        await interaction.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle("🔢 خمن الرقم")
+              .setDescription(`**${hint}**\nتخمينك: **${guess}**\n\n${bar}\nباقي محاولات: **${remaining}**`)
+              .setColor(0xf39c12)
+          ]
+        });
+      }
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
+      .setName("math-challenge")
+      .setDescription("تحدي رياضيات سريع / Quick Math Challenge"),
+    async execute(interaction: ChatInputCommandInteraction) {
+      const ops = ["+", "-", "×"];
+      const op = ops[Math.floor(Math.random() * ops.length)]!;
+      const a = Math.floor(Math.random() * 50) + 1;
+      const b = Math.floor(Math.random() * 50) + 1;
+      let answer: number;
+      if (op === "+") answer = a + b;
+      else if (op === "-") answer = a - b;
+      else answer = a * b;
+      const embed = new EmbedBuilder()
+        .setTitle("🧮 تحدي الرياضيات!")
+        .setDescription(`**احسب السؤال التالي:**\n\n# ${a} ${op} ${b} = ?`)
+        .setColor(0xe74c3c)
+        .setFooter({ text: "الإجابة ستظهر بعد 15 ثانية • Bot_SUKz" });
+      await interaction.reply({ embeds: [embed] });
+      setTimeout(async () => {
+        const answerEmbed = new EmbedBuilder()
+          .setTitle("✅ الإجابة!")
+          .setDescription(`**${a} ${op} ${b} = ${answer}**`)
+          .setColor(0x2ecc71);
+        try { await interaction.followUp({ embeds: [answerEmbed] }); } catch { /* ignored */ }
+      }, 15000);
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
+      .setName("would-you-rather")
+      .setDescription("لعبة أيهما تفضل / Would You Rather"),
+    async execute(interaction: ChatInputCommandInteraction) {
+      const questions = [
+        ["تكون قادر تطير ✈️", "تكون قادر تصبح غير مرئي 👻"],
+        ["تعيش بدون إنترنت 📵", "تعيش بدون موبايل 📱"],
+        ["تكون مشهور على يوتيوب 🎥", "تكون مشهور على تيك توك 🎵"],
+        ["تأكل نفس الأكلة كل يوم 🍕", "ما تقدر تأكل أكلتك المفضلة أبداً 😢"],
+        ["تعيش في الفضاء 🚀", "تعيش في قاع البحر 🌊"],
+        ["تكون ذكي جداً 🧠", "تكون محظوظ جداً 🍀"],
+        ["تتكلم كل اللغات 🌍", "تعزف كل الآلات الموسيقية 🎸"],
+        ["تعيش 200 سنة 👴", "تعيش 50 سنة بصحة مثالية 💪"],
+      ];
+      const q = questions[Math.floor(Math.random() * questions.length)]!;
+      const embed = new EmbedBuilder()
+        .setTitle("🤔 أيهما تفضل؟")
+        .setDescription(`**🅰️ ${q[0]}**\n\nأو\n\n**🅱️ ${q[1]}**`)
+        .setColor(0xff6b35)
+        .setFooter({ text: "صوّت بـ 🅰️ أو 🅱️ • Bot_SUKz" });
+      const msg = await interaction.reply({ embeds: [embed], fetchReply: true });
+      await msg.react("🅰️");
+      await msg.react("🅱️");
+    },
+  },
+];
