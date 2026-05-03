@@ -144,6 +144,60 @@ export const extraCommands = [
   },
   {
     data: new SlashCommandBuilder()
+      .setName("say")
+      .setDescription("خلّي البوت يتكلم عنك / Make the bot speak on your behalf")
+      .addStringOption(opt =>
+        opt.setName("text").setDescription("النص اللي تبي البوت يقوله / Text to say").setRequired(true)
+      )
+      .addStringOption(opt =>
+        opt.setName("image").setDescription("رابط صورة اختياري / Optional image URL").setRequired(false)
+      )
+      .addStringOption(opt =>
+        opt.setName("color")
+          .setDescription("لون الإطار / Embed color")
+          .setRequired(false)
+          .addChoices(
+            { name: "💙 أزرق", value: "blue" },
+            { name: "💚 أخضر", value: "green" },
+            { name: "❤️ أحمر", value: "red" },
+            { name: "💜 بنفسجي", value: "purple" },
+            { name: "🩷 وردي", value: "pink" },
+            { name: "🌙 ذهبي", value: "gold" },
+          )
+      ),
+    async execute(interaction: import("discord.js").ChatInputCommandInteraction) {
+      const text = interaction.options.getString("text", true);
+      const imageUrl = interaction.options.getString("image");
+      const colorChoice = interaction.options.getString("color") ?? "blue";
+
+      const colorMap: Record<string, number> = {
+        blue: 0x5865f2, green: 0x2ecc71, red: 0xe74c3c,
+        purple: 0x9b59b6, pink: 0xff69b4, gold: 0xf1c40f,
+      };
+
+      const embed = new EmbedBuilder()
+        .setDescription(text.slice(0, 4000))
+        .setColor(colorMap[colorChoice] ?? 0x5865f2)
+        .setAuthor({
+          name: interaction.member && "displayName" in interaction.member
+            ? (interaction.member as import("discord.js").GuildMember).displayName
+            : interaction.user.username,
+          iconURL: interaction.user.displayAvatarURL(),
+        })
+        .setTimestamp();
+
+      if (imageUrl) {
+        try {
+          new URL(imageUrl);
+          embed.setImage(imageUrl);
+        } catch { /* invalid URL, skip */ }
+      }
+
+      await interaction.reply({ embeds: [embed] });
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
       .setName("chat")
       .setDescription("سوالف مع الذكاء الاصطناعي / Chat with AI")
       .addStringOption(opt =>
