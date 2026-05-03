@@ -119,6 +119,31 @@ export const extraCommands = [
   },
   {
     data: new SlashCommandBuilder()
+      .setName("dm")
+      .setDescription("إرسال رسالة خاصة لشخص / Send a private DM to a user")
+      .addUserOption(opt => opt.setName("user").setDescription("المستخدم / User to DM").setRequired(true))
+      .addStringOption(opt => opt.setName("message").setDescription("الرسالة / Message to send").setRequired(true)),
+    async execute(interaction: import("discord.js").ChatInputCommandInteraction) {
+      const target = interaction.options.getUser("user", true);
+      const message = interaction.options.getString("message", true);
+      if (target.bot) return interaction.reply({ content: "❌ ما تقدر ترسل لبوت!", ephemeral: true });
+      if (target.id === interaction.user.id) return interaction.reply({ content: "❌ ما تقدر ترسل لنفسك!", ephemeral: true });
+      try {
+        const embed = new EmbedBuilder()
+          .setTitle("📨 رسالة خاصة / Private Message")
+          .setDescription(message)
+          .setColor(0x5865f2)
+          .setFooter({ text: `أرسلها: ${interaction.user.username} من ${interaction.guild?.name ?? "سيرفر"}` })
+          .setTimestamp();
+        await target.send({ embeds: [embed] });
+        await interaction.reply({ content: `✅ تم إرسال الرسالة لـ **${target.username}** بنجاح!`, ephemeral: true });
+      } catch {
+        await interaction.reply({ content: `❌ ما قدرت أرسل لـ **${target.username}** — ربما أوقف الرسائل الخاصة.`, ephemeral: true });
+      }
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
       .setName("chat")
       .setDescription("سوالف مع الذكاء الاصطناعي / Chat with AI")
       .addStringOption(opt =>
