@@ -128,6 +128,7 @@ export async function startBot(): Promise<void> {
     if (interaction.isButton()) {
       const btn = interaction as ButtonInteraction;
       if (
+        btn.customId === "open_ticket_panel" ||
         btn.customId.startsWith("close_ticket_") ||
         btn.customId.startsWith("claim_ticket_") ||
         btn.customId.startsWith("transcript_ticket_")
