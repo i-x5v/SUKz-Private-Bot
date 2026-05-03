@@ -69,7 +69,7 @@ for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) 
 
 client.once('ready', async () => {
   console.log(`✅ ${client.user.tag} يعمل الآن`);
-  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);MTQ3NjQyMDE3MDMzMDI3NTg2MA.G0d4yQ.5JtkokAqHhJidH1P5vf8sxpjW2fEdS5eLrO8G4
   await rest.put(Routes.applicationCommands(client.user.id), { body: commandsData });
   console.log('✅ تم تسجيل الأوامر');
 });
@@ -88,7 +88,7 @@ client.on('interactionCreate', async (interaction) => {
   if (ticket?.handleInteraction) await ticket.handleInteraction(interaction);
 });
 
-client.login(process.env.TOKEN);const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+client.login(process.env.TOKEN);MTQ3NjQyMDE3MDMzMDI3NTg2MA.G0d4yQ.5JtkokAqHhJidH1P5vf8sxpjW2fEdS5eLrO8G4const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
