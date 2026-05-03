@@ -4,7 +4,7 @@ import { generalCommands } from "./commands/general";
 import { funCommands } from "./commands/fun";
 import { utilityCommands } from "./commands/utility";
 import { moderationCommands } from "./commands/moderation";
-import { musicCommands } from "./commands/music";
+import { musicCommands, handleMusicButton } from "./commands/music";
 import { economyCommands } from "./commands/economy";
 import { statsCommands } from "./commands/stats";
 import { gamesCommands } from "./commands/games";
@@ -13,6 +13,7 @@ import { configCommands } from "./commands/config";
 import { extraCommands } from "./commands/extra";
 import { arabicFeaturesCommands } from "./commands/arabic_features";
 import { ticketsCommands, handleTicketButton } from "./commands/tickets";
+import { gamingMapsCommands } from "./commands/gaming_maps";
 
 type Command = {
   data: { name: string; toJSON(): unknown };
@@ -33,6 +34,7 @@ const allCommands: Command[] = [
   ...extraCommands,
   ...arabicFeaturesCommands,
   ...ticketsCommands,
+  ...gamingMapsCommands,
 ];
 
 const isProduction = process.env["NODE_ENV"] === "production";
@@ -127,13 +129,19 @@ export async function startBot(): Promise<void> {
     // Handle button interactions
     if (interaction.isButton()) {
       const btn = interaction as ButtonInteraction;
-      if (
+        if (
         btn.customId === "open_ticket_panel" ||
         btn.customId.startsWith("close_ticket_") ||
         btn.customId.startsWith("claim_ticket_") ||
         btn.customId.startsWith("transcript_ticket_")
       ) {
         try { await handleTicketButton(btn); } catch (err) { logger.error({ err }, "Button handler error"); }
+        return;
+      }
+      if (
+        btn.customId.startsWith("music_")
+      ) {
+        try { await handleMusicButton(btn); } catch (err) { logger.error({ err }, "Music button error"); }
         return;
       }
     }
