@@ -1,0 +1,213 @@
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('chat')
+    .setDescription('تحدث مع الذكاء الاصطناعي')
+    .addStringOption(opt =>
+      opt.setName('message').setDescription('رسالتك').setRequired(true).setMaxLength(1000)),
+
+  async execute(interaction) {
+    const message = interaction.options.getString('message');
+    await interaction.deferReply();
+
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'أنت مساعد ذكي ودود تتحدث العربية بطلاقة. أجب باختصار ووضوح.' },
+            { role: 'user', content: message },
+          ],
+          max_tokens: 500,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const reply = data.choices[0].message.content;
+
+      const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
+        .addFields(
+          { name: '💭 سؤالك', value: message },
+          { name: '🤖 الإجابة', value: reply.slice(0, 1024) },
+        )
+        .setFooter({ text: 'Powered by AI' })
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (err) {
+      console.error(err);
+      await interaction.editReply('❌ حصل خطأ، حاول لاحقاً.');
+    }
+  },
+};require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord.js');
+
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+});
+
+client.commands = new Collection();
+const commandsData = [];
+
+const commandsPath = path.join(__dirname, 'commands');
+for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) {
+  const command = require(path.join(commandsPath, file));
+  client.commands.set(command.data.name, command);
+  commandsData.push(command.data.toJSON());
+}
+
+client.once('ready', async () => {
+  console.log(`✅ ${client.user.tag} يعمل الآن`);
+  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+  await rest.put(Routes.applicationCommands(client.user.id), { body: commandsData });
+  console.log('✅ تم تسجيل الأوامر');
+});
+
+client.on('interactionCreate', async (interaction) => {
+  if (interaction.isChatInputCommand()) {
+    const command = client.commands.get(interaction.commandName);
+    if (command) {
+      try { await command.execute(interaction); }
+      catch (e) { console.error(e); }
+    }
+    return;
+  }
+
+  const ticket = client.commands.get('ticket');
+  if (ticket?.handleInteraction) await ticket.handleInteraction(interaction);
+});
+
+client.login(process.env.TOKEN);const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('say')
+    .setDescription('يخلي البوت يقول رسالة باسمك')
+    .addStringOption(opt =>
+      opt.setName('message')
+        .setDescription('الرسالة اللي تبي البوت يقولها')
+        .setRequired(true)
+        .setMaxLength(2000))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+
+  async execute(interaction) {
+    const message = interaction.options.getString('message');
+    await interaction.reply({ content: '✅ تم الإرسال', ephemeral: true });
+    await interaction.channel.send(message);
+  },
+};const {
+  SlashCommandBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder,
+  PermissionFlagsBits,
+  ChannelType,
+} = require('discord.js');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('ticket')
+    .setDescription('إرسال لوحة فتح التذاكر')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+
+  async execute(interaction) {
+    const embed = new EmbedBuilder()
+      .setColor(0x5865F2)
+      .setTitle('🎫 نظام الدعم الفني')
+      .setDescription(
+        '**أهلاً بك في مركز الدعم!**\n\n' +
+        '> اختر نوع التذكرة من القائمة بالأسفل وسيتم إنشاء قناة خاصة بك مع فريق الدعم.\n\n' +
+        '🟢 **متاح الآن** • ⏱️ متوسط الرد: 5 دقائق'
+      )
+      .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
+      .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() })
+      .setTimestamp();
+
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId('ticket_menu')
+      .setPlaceholder('🔽 اختر نوع التذكرة...')
+      .addOptions([
+        { label: 'دعم عام', description: 'استفسارات أو مساعدة عامة', value: 'general', emoji: '💬' },
+        { label: 'مشكلة تقنية', description: 'الإبلاغ عن مشكلة أو خطأ', value: 'bug', emoji: '🐛' },
+        { label: 'شكوى', description: 'تقديم شكوى ضد عضو', value: 'report', emoji: '🚨' },
+        { label: 'شراكة', description: 'طلب شراكة أو تعاون', value: 'partner', emoji: '🤝' },
+      ]);
+
+    await interaction.channel.send({
+      embeds: [embed],
+      components: [new ActionRowBuilder().addComponents(menu)],
+    });
+    await interaction.reply({ content: '✅ تم إرسال اللوحة', ephemeral: true });
+  },
+
+  async handleInteraction(interaction) {
+    if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_menu') {
+      const type = interaction.values[0];
+      const labels = { general: 'دعم-عام', bug: 'مشكلة', report: 'شكوى', partner: 'شراكة' };
+
+      const existing = interaction.guild.channels.cache.find(
+        c => c.name === `ticket-${interaction.user.username.toLowerCase()}`
+      );
+      if (existing) {
+        return interaction.reply({ content: `❌ لديك تذكرة مفتوحة بالفعل: ${existing}`, ephemeral: true });
+      }
+
+      const channel = await interaction.guild.channels.create({
+        name: `ticket-${interaction.user.username}`,
+        type: ChannelType.GuildText,
+        topic: `تذكرة | ${labels[type]} | ${interaction.user.id}`,
+        permissionOverwrites: [
+          { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+          {
+            id: interaction.user.id,
+            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles],
+          },
+        ],
+      });
+
+      const welcome = new EmbedBuilder()
+        .setColor(0x57F287)
+        .setTitle(`🎫 تذكرة • ${labels[type]}`)
+        .setDescription(
+          `أهلاً ${interaction.user} 👋\n\n` +
+          '> سيقوم فريق الدعم بالرد عليك في أقرب وقت.\n' +
+          '> اشرح مشكلتك بالتفصيل من فضلك.\n\n' +
+          '⚠️ اضغط على الزر بالأسفل لإغلاق التذكرة.'
+        )
+        .setTimestamp();
+
+      const buttons = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('ticket_close').setLabel('إغلاق التذكرة').setEmoji('🔒').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('ticket_claim').setLabel('استلام').setEmoji('✋').setStyle(ButtonStyle.Primary),
+      );
+
+      await channel.send({ content: `${interaction.user}`, embeds: [welcome], components: [buttons] });
+      await interaction.reply({ content: `✅ تم إنشاء تذكرتك: ${channel}`, ephemeral: true });
+    }
+
+    if (interaction.isButton() && interaction.customId === 'ticket_close') {
+      await interaction.reply({ content: '🔒 سيتم إغلاق التذكرة خلال 5 ثواني...' });
+      setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+    }
+
+    if (interaction.isButton() && interaction.customId === 'ticket_claim') {
+      const embed = new EmbedBuilder()
+        .setColor(0xFEE75C)
+        .setDescription(`✋ تم استلام التذكرة بواسطة ${interaction.user}`);
+      await interaction.reply({ embeds: [embed] });
+    }
+  },
+};
