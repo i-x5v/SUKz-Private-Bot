@@ -14,6 +14,7 @@ import { extraCommands } from "./commands/extra";
 import { arabicFeaturesCommands } from "./commands/arabic_features";
 import { ticketsCommands, handleTicketButton } from "./commands/tickets";
 import { gamingMapsCommands } from "./commands/gaming_maps";
+import { autoreplyCommands, checkAutoReply, autoRepliesStore } from "./commands/autoreply";
 
 type Command = {
   data: { name: string; toJSON(): unknown };
@@ -35,6 +36,7 @@ const allCommands: Command[] = [
   ...arabicFeaturesCommands,
   ...ticketsCommands,
   ...gamingMapsCommands,
+  ...autoreplyCommands,
 ];
 
 const isProduction = process.env["NODE_ENV"] === "production";
@@ -168,6 +170,10 @@ export async function startBot(): Promise<void> {
         }
       } catch { /* interaction expired */ }
     }
+  });
+
+  client.on(Events.MessageCreate, (message) => {
+    checkAutoReply(message as import("discord.js").Message);
   });
 
   client.on("error", (err) => {
