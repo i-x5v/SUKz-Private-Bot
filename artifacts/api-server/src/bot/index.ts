@@ -70,7 +70,7 @@ export async function startBot(): Promise<void> {
     logger.info({ tag: readyClient.user.tag, commands: commands.size, mode: isProduction ? "production" : "development" }, "Discord bot is ready!");
 
     const statusMessages = [
-      { name: "/ask — اسألني أي شيء 🤖", type: ActivityType.Watching },
+      { name: "/ai — تحدث مع الذكاء الاصطناعي 🤖", type: ActivityType.Watching },
       { name: "/ticket — افتح تذكرة دعم 🎫", type: ActivityType.Watching },
       { name: "/console — حل مشاكل الكونسل 🎮", type: ActivityType.Watching },
       { name: "/adhkar — أذكار إسلامية 📿", type: ActivityType.Watching },
