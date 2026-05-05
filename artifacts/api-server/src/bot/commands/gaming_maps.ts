@@ -6,19 +6,16 @@ import {
   ButtonBuilder,
   ButtonStyle,
 } from "discord.js";
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 
-let _openaiClient: OpenAI | null = null;
-function getOpenAI(): OpenAI {
-  if (!_openaiClient) {
-    const key = process.env["OPENAI_API_KEY"];
-    if (!key) throw new Error("OPENAI_API_KEY غير مضبوط في متغيرات البيئة");
-    _openaiClient = new OpenAI({ apiKey: key });
-  }
-  return _openaiClient;
-}
+const geminiBaseUrl = process.env["AI_INTEGRATIONS_GEMINI_BASE_URL"];
+const geminiApiKey = process.env["AI_INTEGRATIONS_GEMINI_API_KEY"] ?? process.env["GEMINI_API_KEY"] ?? "no-key";
+const geminiClient = new GoogleGenAI({
+  apiKey: geminiApiKey,
+  httpOptions: { apiVersion: "", ...(geminiBaseUrl ? { baseUrl: geminiBaseUrl } : {}) },
+});
 
-const aiConversations = new Map<string, { role: "user" | "assistant"; content: string }[]>();
+const aiConversations = new Map<string, { role: "user" | "model"; text: string }[]>();
 
 interface MapEntry {
   name: string;
@@ -1280,30 +1277,26 @@ export const gamingMapsCommands = [
 
       await interaction.deferReply();
 
-      history.push({ role: "user", content: message });
+      history.push({ role: "user", text: message });
 
       try {
-        const stream = await getOpenAI().chat.completions.create({
-          model: "gpt-4o-mini",
-          stream: true,
-          max_tokens: 1500,
-          messages: [
-            {
-              role: "system",
-              content: `أنت شخص ذكي اسمك SUKz.
+        const stream = await geminiClient.models.generateContentStream({
+          model: "gemini-2.0-flash",
+          contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
+          config: {
+            systemInstruction: `أنت شخص ذكي اسمك SUKz.
 - إذا تكلم المستخدم بالعربية رد بالعربية، وإذا تكلم بالإنجليزية رد بالإنجليزية
 - ردودك مباشرة وطبيعية بدون تمهيدات
 - لا تتجاوز 400 كلمة`,
-            },
-            ...history,
-          ],
+            maxOutputTokens: 1500,
+          },
         });
 
         let accumulated = "";
         let lastEdit = 0;
 
         for await (const chunk of stream) {
-          accumulated += chunk.choices[0]?.delta?.content ?? "";
+          accumulated += chunk.text ?? "";
           const now = Date.now();
           if (now - lastEdit >= 800 && accumulated.trim().length > 0) {
             await interaction.editReply({ content: accumulated.slice(0, 1900) + " ▌" });
@@ -1313,7 +1306,7 @@ export const gamingMapsCommands = [
 
         const finalText = accumulated.trim() || "ما قدرت أرد، جرب مرة ثانية.";
 
-        history.push({ role: "assistant", content: finalText });
+        history.push({ role: "model", text: finalText });
         if (history.length > 20) history.splice(0, 2);
         aiConversations.set(userId, history);
 
