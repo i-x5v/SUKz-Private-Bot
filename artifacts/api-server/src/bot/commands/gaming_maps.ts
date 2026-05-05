@@ -16,6 +16,8 @@ const geminiClient = new GoogleGenAI({
 });
 
 const aiConversations = new Map<string, { role: "user" | "model"; text: string }[]>();
+const aiCooldowns = new Map<string, number>();
+const AI_COOLDOWN_MS = 8000;
 
 interface MapEntry {
   name: string;
@@ -1271,44 +1273,39 @@ export const gamingMapsCommands = [
       const reset = interaction.options.getBoolean("reset") ?? false;
       const userId = interaction.user.id;
 
+      const lastUsed = aiCooldowns.get(userId) ?? 0;
+      const remaining = AI_COOLDOWN_MS - (Date.now() - lastUsed);
+      if (remaining > 0) {
+        await interaction.reply({
+          content: `⏳ انتظر **${Math.ceil(remaining / 1000)} ثوان** قبل تستخدم الأمر مرة ثانية.`,
+          flags: 64,
+        });
+        return;
+      }
+
       if (reset) aiConversations.delete(userId);
 
       const history = aiConversations.get(userId) ?? [];
 
       await interaction.deferReply();
+      aiCooldowns.set(userId, Date.now());
 
       history.push({ role: "user", text: message });
 
-      const callGemini = async (retries = 3): Promise<string> => {
-        for (let i = 0; i < retries; i++) {
-          try {
-            const response = await geminiClient.models.generateContent({
-              model: "gemini-2.5-flash",
-              contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
-              config: {
-                systemInstruction: `أنت شخص ذكي اسمك SUKz.
+      try {
+        const response = await geminiClient.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
+          config: {
+            systemInstruction: `أنت شخص ذكي اسمك SUKz.
 - إذا تكلم المستخدم بالعربية رد بالعربية، وإذا تكلم بالإنجليزية رد بالإنجليزية
 - ردودك مباشرة وطبيعية بدون تمهيدات
 - لا تتجاوز 400 كلمة`,
-                maxOutputTokens: 1500,
-              },
-            });
-            return response.text?.trim() || "ما قدرت أرد، جرب مرة ثانية.";
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            const is503 = msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("high demand");
-            if (is503 && i < retries - 1) {
-              await new Promise(r => setTimeout(r, 2000 * (i + 1)));
-              continue;
-            }
-            throw err;
-          }
-        }
-        return "ما قدرت أرد، جرب مرة ثانية.";
-      };
+            maxOutputTokens: 1500,
+          },
+        });
 
-      try {
-        const finalText = await callGemini();
+        const finalText = response.text?.trim() || "ما قدرت أرد، جرب مرة ثانية.";
 
         history.push({ role: "model", text: finalText });
         if (history.length > 20) history.splice(0, 2);
@@ -1318,8 +1315,11 @@ export const gamingMapsCommands = [
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         const is503 = errMsg.includes("503") || errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand");
+        const is429 = errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota");
         await interaction.editReply({
-          content: is503
+          content: is429
+            ? "⚠️ وصلنا الحد اليومي لـ Gemini، حاول بكره."
+            : is503
             ? "⏳ Gemini مشغول الحين، حاول بعد ثواني."
             : `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\``,
         });
