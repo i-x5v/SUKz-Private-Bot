@@ -1263,7 +1263,7 @@ export const gamingMapsCommands = [
       )
       .addBooleanOption(opt =>
         opt.setName("reset")
-          .setDescription("ابدأ محادثة جديدة / Start fresh conversation")
+          .setDescription("ابدأ محادثة جديدة / Start fresh")
           .setRequired(false)
       ),
     async execute(interaction: ChatInputCommandInteraction) {
@@ -1275,42 +1275,42 @@ export const gamingMapsCommands = [
 
       const history = aiConversations.get(userId) ?? [];
 
+      await interaction.deferReply();
+
+      history.push({ role: "user", text: message });
+
       try {
-        await interaction.deferReply();
-
-        const channel = interaction.channel;
-        const typingInterval = channel
-          ? setInterval(() => { channel.sendTyping().catch(() => {}); }, 4000)
-          : null;
-
-        if (channel) channel.sendTyping().catch(() => {});
-
-        history.push({ role: "user", text: message });
-
-        const response = await geminiClient.models.generateContent({
-          model: "gemini-2.5-flash",
+        const stream = await geminiClient.models.generateContentStream({
+          model: "gemini-2.0-flash",
           contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
           config: {
-            systemInstruction: `أنت شخص ذكي اسمك SUKz في سيرفر ديسكورد.
-- تتذكر سياق المحادثة وتبني عليها
+            systemInstruction: `أنت شخص ذكي اسمك SUKz.
 - إذا تكلم المستخدم بالعربية رد بالعربية، وإذا تكلم بالإنجليزية رد بالإنجليزية
-- ردودك طبيعية ومباشرة وكأنك شخص حقيقي يكتب — بدون تمهيدات مثل "بالتأكيد!" أو "أهلاً!"
+- ردودك مباشرة وطبيعية بدون تمهيدات
 - لا تتجاوز 400 كلمة`,
-            maxOutputTokens: 1800,
+            maxOutputTokens: 1500,
           },
         });
 
-        if (typingInterval) clearInterval(typingInterval);
+        let accumulated = "";
+        let lastEdit = 0;
 
-        const aiReply = response.text ?? "ما قدرت أرد، جرب مرة ثانية.";
+        for await (const chunk of stream) {
+          accumulated += chunk.text ?? "";
+          const now = Date.now();
+          if (now - lastEdit >= 800 && accumulated.trim().length > 0) {
+            await interaction.editReply({ content: accumulated.slice(0, 1900) + " ▌" });
+            lastEdit = now;
+          }
+        }
 
-        history.push({ role: "model", text: aiReply });
+        const finalText = accumulated.trim() || "ما قدرت أرد، جرب مرة ثانية.";
+
+        history.push({ role: "model", text: finalText });
         if (history.length > 20) history.splice(0, 2);
         aiConversations.set(userId, history);
 
-        const replyText = aiReply.slice(0, 1900);
-
-        await interaction.editReply({ content: replyText });
+        await interaction.editReply({ content: finalText.slice(0, 1900) });
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         await interaction.editReply({ content: `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\`` });
