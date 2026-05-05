@@ -12,7 +12,7 @@ const geminiBaseUrl = process.env["AI_INTEGRATIONS_GEMINI_BASE_URL"];
 const geminiApiKey = process.env["AI_INTEGRATIONS_GEMINI_API_KEY"] ?? process.env["GEMINI_API_KEY"] ?? "no-key";
 const geminiClient = new GoogleGenAI({
   apiKey: geminiApiKey,
-  httpOptions: { apiVersion: "", ...(geminiBaseUrl ? { baseUrl: geminiBaseUrl } : {}) },
+  ...(geminiBaseUrl ? { httpOptions: { apiVersion: "", baseUrl: geminiBaseUrl } } : {}),
 });
 
 const aiConversations = new Map<string, { role: "user" | "model"; text: string }[]>();
