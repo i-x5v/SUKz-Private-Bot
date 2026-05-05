@@ -8,7 +8,15 @@ import {
 } from "discord.js";
 import OpenAI from "openai";
 
-const openaiClient = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] ?? "" });
+let _openaiClient: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openaiClient) {
+    const key = process.env["OPENAI_API_KEY"];
+    if (!key) throw new Error("OPENAI_API_KEY غير مضبوط في متغيرات البيئة");
+    _openaiClient = new OpenAI({ apiKey: key });
+  }
+  return _openaiClient;
+}
 
 const aiConversations = new Map<string, { role: "user" | "assistant"; content: string }[]>();
 
@@ -1275,7 +1283,7 @@ export const gamingMapsCommands = [
       history.push({ role: "user", content: message });
 
       try {
-        const stream = await openaiClient.chat.completions.create({
+        const stream = await getOpenAI().chat.completions.create({
           model: "gpt-4o-mini",
           stream: true,
           max_tokens: 1500,
