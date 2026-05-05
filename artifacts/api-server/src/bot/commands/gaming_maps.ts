@@ -1255,7 +1255,7 @@ export const gamingMapsCommands = [
   {
     data: new SlashCommandBuilder()
       .setName("ai")
-      .setDescription("🤖 تحدث مع الذكاء الاصطناعي — يتذكر المحادثة / Chat with AI (remembers context)")
+      .setDescription("🤖 تحدث مع الذكاء الاصطناعي / Chat with AI")
       .addStringOption(opt =>
         opt.setName("message")
           .setDescription("رسالتك / Your message")
@@ -1263,7 +1263,7 @@ export const gamingMapsCommands = [
       )
       .addBooleanOption(opt =>
         opt.setName("reset")
-          .setDescription("ابدأ محادثة جديدة وامسح التاريخ / Start fresh conversation")
+          .setDescription("ابدأ محادثة جديدة / Start fresh conversation")
           .setRequired(false)
       ),
     async execute(interaction: ChatInputCommandInteraction) {
@@ -1278,42 +1278,39 @@ export const gamingMapsCommands = [
       try {
         await interaction.deferReply();
 
+        const channel = interaction.channel;
+        const typingInterval = channel
+          ? setInterval(() => { channel.sendTyping().catch(() => {}); }, 4000)
+          : null;
+
+        if (channel) channel.sendTyping().catch(() => {});
+
         history.push({ role: "user", text: message });
 
         const response = await geminiClient.models.generateContent({
           model: "gemini-2.5-flash",
           contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
           config: {
-            systemInstruction: `أنت مساعد ذكي ومرح اسمك SUKz AI في سيرفر ديسكورد.
-- تتذكر سياق المحادثة السابقة وتبني عليها
-- إذا تكلم المستخدم بالعربية، رد بالعربية
-- إذا تكلم بالإنجليزية، رد بالإنجليزية
-- أجوبتك مختصرة ومفيدة ومرحة (لا تتجاوز 500 كلمة)
-- إذا سألك عن نفسك: أخبره أنك SUKz AI مدعوم بجيميني`,
+            systemInstruction: `أنت شخص ذكي اسمك SUKz في سيرفر ديسكورد.
+- تتذكر سياق المحادثة وتبني عليها
+- إذا تكلم المستخدم بالعربية رد بالعربية، وإذا تكلم بالإنجليزية رد بالإنجليزية
+- ردودك طبيعية ومباشرة وكأنك شخص حقيقي يكتب — بدون تمهيدات مثل "بالتأكيد!" أو "أهلاً!"
+- لا تتجاوز 400 كلمة`,
             maxOutputTokens: 1800,
           },
         });
 
-        const aiReply = response.text ?? "عذراً، ما قدرت أرد. جرب مرة ثانية.";
+        if (typingInterval) clearInterval(typingInterval);
+
+        const aiReply = response.text ?? "ما قدرت أرد، جرب مرة ثانية.";
 
         history.push({ role: "model", text: aiReply });
-        if (history.length > 10) history.splice(0, 2);
+        if (history.length > 20) history.splice(0, 2);
         aiConversations.set(userId, history);
 
-        const turnCount = Math.ceil(history.length / 2);
+        const replyText = aiReply.slice(0, 1900);
 
-        const embed = new EmbedBuilder()
-          .setTitle("🤖 SUKz AI")
-          .setColor(0x5865f2)
-          .addFields(
-            { name: `💬 ${interaction.user.username}`, value: message.slice(0, 1024) },
-            { name: "🤖 SUKz AI", value: aiReply.slice(0, 1024) },
-          )
-          .setThumbnail(interaction.user.displayAvatarURL())
-          .setFooter({ text: `محادثة #${turnCount} • /ai reset:نعم لمحادثة جديدة` })
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ content: replyText });
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         await interaction.editReply({ content: `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\`` });
