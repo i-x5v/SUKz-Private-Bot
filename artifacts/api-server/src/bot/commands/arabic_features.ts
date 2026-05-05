@@ -153,49 +153,6 @@ const activeGuessGames = new Map<string, { number: number; attempts: number }>()
 export const arabicFeaturesCommands = [
   {
     data: new SlashCommandBuilder()
-      .setName("ask")
-      .setDescription("اسأل الذكاء الاصطناعي أي سؤال / Ask AI anything")
-      .addStringOption(opt =>
-        opt.setName("question")
-          .setDescription("سؤالك / Your question")
-          .setRequired(true)
-      ),
-    async execute(interaction: ChatInputCommandInteraction) {
-      const question = interaction.options.getString("question", true);
-      try { await interaction.deferReply(); } catch { return; }
-      try {
-        const response = await geminiClient.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [{ role: "user", parts: [{ text: question }] }],
-          config: {
-            systemInstruction: `أنت مساعد ذكي ومتعدد المجالات في سيرفر ديسكورد.
-- إذا كان السؤال بالعربية: أجب بالعربية
-- إذا كان السؤال بالإنجليزية: أجب بالإنجليزية
-- أجب بشكل مختصر ودقيق ومفيد (لا تتجاوز 400 كلمة)
-- قدم الحقائق العلمية بدقة ووضوح`,
-            maxOutputTokens: 1500,
-          },
-        });
-        const aiReply = response.text ?? "عذراً، لم أتمكن من الإجابة. حاول مرة أخرى.";
-        const embed = new EmbedBuilder()
-          .setTitle("🤖 الذكاء الاصطناعي يجيب")
-          .setColor(0x5865f2)
-          .addFields(
-            { name: "❓ السؤال", value: question.slice(0, 1024) },
-            { name: "✅ الإجابة", value: aiReply.slice(0, 1024) },
-          )
-          .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
-          .setFooter({ text: "Powered by Gemini AI • Bot_SUKz" })
-          .setTimestamp();
-        await interaction.editReply({ embeds: [embed] });
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        await interaction.editReply({ content: `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\`` });
-      }
-    },
-  },
-  {
-    data: new SlashCommandBuilder()
       .setName("adhkar")
       .setDescription("أذكار إسلامية / Islamic Dhikr")
       .addStringOption(opt =>
