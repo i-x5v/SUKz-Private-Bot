@@ -1281,7 +1281,7 @@ export const gamingMapsCommands = [
 
       try {
         const stream = await geminiClient.models.generateContentStream({
-          model: "gemini-2.0-flash",
+          model: "gemini-2.5-flash",
           contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
           config: {
             systemInstruction: `أنت شخص ذكي اسمك SUKz.
