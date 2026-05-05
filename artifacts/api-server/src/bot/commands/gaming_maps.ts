@@ -1279,20 +1279,36 @@ export const gamingMapsCommands = [
 
       history.push({ role: "user", text: message });
 
-      try {
-        const response = await geminiClient.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
-          config: {
-            systemInstruction: `أنت شخص ذكي اسمك SUKz.
+      const callGemini = async (retries = 3): Promise<string> => {
+        for (let i = 0; i < retries; i++) {
+          try {
+            const response = await geminiClient.models.generateContent({
+              model: "gemini-2.5-flash",
+              contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
+              config: {
+                systemInstruction: `أنت شخص ذكي اسمك SUKz.
 - إذا تكلم المستخدم بالعربية رد بالعربية، وإذا تكلم بالإنجليزية رد بالإنجليزية
 - ردودك مباشرة وطبيعية بدون تمهيدات
 - لا تتجاوز 400 كلمة`,
-            maxOutputTokens: 1500,
-          },
-        });
+                maxOutputTokens: 1500,
+              },
+            });
+            return response.text?.trim() || "ما قدرت أرد، جرب مرة ثانية.";
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            const is503 = msg.includes("503") || msg.includes("UNAVAILABLE") || msg.includes("high demand");
+            if (is503 && i < retries - 1) {
+              await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+              continue;
+            }
+            throw err;
+          }
+        }
+        return "ما قدرت أرد، جرب مرة ثانية.";
+      };
 
-        const finalText = response.text?.trim() || "ما قدرت أرد، جرب مرة ثانية.";
+      try {
+        const finalText = await callGemini();
 
         history.push({ role: "model", text: finalText });
         if (history.length > 20) history.splice(0, 2);
@@ -1301,7 +1317,12 @@ export const gamingMapsCommands = [
         await interaction.editReply({ content: finalText.slice(0, 1900) });
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        await interaction.editReply({ content: `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\`` });
+        const is503 = errMsg.includes("503") || errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand");
+        await interaction.editReply({
+          content: is503
+            ? "⏳ Gemini مشغول الحين، حاول بعد ثواني."
+            : `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\``,
+        });
       }
     },
   },
