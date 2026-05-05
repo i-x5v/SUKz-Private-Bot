@@ -1280,7 +1280,7 @@ export const gamingMapsCommands = [
       history.push({ role: "user", text: message });
 
       try {
-        const stream = await geminiClient.models.generateContentStream({
+        const response = await geminiClient.models.generateContent({
           model: "gemini-2.5-flash",
           contents: history.map(h => ({ role: h.role, parts: [{ text: h.text }] })),
           config: {
@@ -1292,19 +1292,7 @@ export const gamingMapsCommands = [
           },
         });
 
-        let accumulated = "";
-        let lastEdit = 0;
-
-        for await (const chunk of stream) {
-          accumulated += chunk.text ?? "";
-          const now = Date.now();
-          if (now - lastEdit >= 800 && accumulated.trim().length > 0) {
-            await interaction.editReply({ content: accumulated.slice(0, 1900) + " ▌" });
-            lastEdit = now;
-          }
-        }
-
-        const finalText = accumulated.trim() || "ما قدرت أرد، جرب مرة ثانية.";
+        const finalText = response.text?.trim() || "ما قدرت أرد، جرب مرة ثانية.";
 
         history.push({ role: "model", text: finalText });
         if (history.length > 20) history.splice(0, 2);
