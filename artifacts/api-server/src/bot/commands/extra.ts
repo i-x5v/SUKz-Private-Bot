@@ -198,49 +198,6 @@ export const extraCommands = [
   },
   {
     data: new SlashCommandBuilder()
-      .setName("chat")
-      .setDescription("سوالف مع الذكاء الاصطناعي / Chat with AI")
-      .addStringOption(opt =>
-        opt.setName("message")
-          .setDescription("رسالتك للذكاء الاصطناعي / Your message to AI")
-          .setRequired(true)
-      ),
-    async execute(interaction: ChatInputCommandInteraction) {
-      const userMessage = interaction.options.getString("message", true);
-      try { await interaction.deferReply(); } catch { return; }
-
-      try {
-        const response = await geminiClient.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [{ role: "user", parts: [{ text: userMessage }] }],
-          config: {
-            systemInstruction: "أنت مساعد ذكي ومفيد في سيرفر ديسكورد. رد بشكل مختصر وواضح. إذا كان السؤال بالعربي رد بالعربي، وإذا كان بالإنجليزي رد بالإنجليزي.",
-            maxOutputTokens: 1024,
-          },
-        });
-
-        const aiReply = response.text ?? "لم أتمكن من الرد، حاول مرة ثانية.";
-
-        const embed = new EmbedBuilder()
-          .setColor(0x5865f2)
-          .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
-          .addFields(
-            { name: "💬 رسالتك", value: userMessage.slice(0, 1024) },
-            { name: "🤖 الذكاء الاصطناعي", value: aiReply.slice(0, 1024) },
-          )
-          .setFooter({ text: "Powered by Gemini AI • Bot_SUKz" })
-          .setTimestamp();
-
-        await interaction.editReply({ embeds: [embed] });
-      } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        console.error("[/chat error]", errMsg);
-        await interaction.editReply({ content: `❌ حدث خطأ: \`${errMsg.slice(0, 200)}\`` });
-      }
-    },
-  },
-  {
-    data: new SlashCommandBuilder()
       .setName("iq")
       .setDescription("Check someone's IQ")
       .addUserOption(opt => opt.setName("user").setDescription("User to check")),
