@@ -1191,14 +1191,129 @@ const GAMES: Record<string, GameData> = {
   },
 };
 
+// ══════════════════════════════════════════
+//        WEAPON ATTACHMENTS LOOKUP
+// ══════════════════════════════════════════
+const WEAPON_ATTACHMENTS: Record<string, string[]> = {
+  // ── CoD 4 ──
+  "M16A4":          ["Red Dot Sight", "Suppressor", "Grenade Launcher"],
+  "M40A3":          ["ACOG Scope", "FMJ", "Suppressor"],
+  "MP5":            ["Silencer", "Red Dot Sight", "Foregrip"],
+  "G3":             ["ACOG Scope", "FMJ", "None"],
+  "AK-47":          ["Red Dot Sight", "Suppressor", "Foregrip"],
+  "P90":            ["Silencer", "Red Dot Sight", "Extended Mag"],
+  "Barrett .50cal": ["ACOG Scope", "FMJ", "None"],
+  "M1014":          ["None (كافي وحده)", "Steady Aim Perk", "None"],
+  "Mini Uzi":       ["Silencer", "Red Dot Sight", "None"],
+  "SVD":            ["ACOG Scope", "FMJ", "None"],
+  "M14":            ["ACOG Scope", "Suppressor", "None"],
+  "Desert Eagle":   ["FMJ", "None", "None"],
+  // ── WaW ──
+  "PTRS-41":        ["Telescopic Sight", "None", "None"],
+  "Type 100":       ["Suppressor", "Extended Mag", "None"],
+  "M1 Garand":      ["Telescopic Sight", "None", "None"],
+  "PPSh-41":        ["Drum Mag", "Suppressor", "None"],
+  "DP28":           ["Bipod", "Extended Mag", "None"],
+  "Kar98k":         ["Telescopic Sight", "None", "None"],
+  "Trench Gun":     ["Grip", "None", "None"],
+  "BAR":            ["Bipod", "FMJ", "None"],
+  "M1A1 Carbine":   ["Suppressor", "None", "None"],
+  "SVT-40":         ["Telescopic Sight", "None", "None"],
+  // ── MW2 ──
+  "SCAR-H":         ["Holographic Sight", "FMJ", "Heartbeat Sensor"],
+  "UMP45":          ["Silencer", "Extended Mag", "Holographic Sight"],
+  "Intervention":   ["FMJ", "Thermal Scope", "None"],
+  "FAMAS":          ["Grenade Launcher", "Suppressor", "FMJ"],
+  "ACR":            ["Suppressor", "Heartbeat Sensor", "FMJ"],
+  "TAR-21":         ["FMJ", "Holographic Sight", "Foregrip"],
+  "Striker":        ["Extended Mag", "Suppressor", "Steady Aim"],
+  "M240":           ["Grip", "FMJ", "Extended Mag"],
+  "USP .45":        ["Tactical Knife", "Suppressor", "None"],
+  // ── BO1 ──
+  "AK-74u":         ["Rapid Fire", "Extended Mag", "Suppressor"],
+  "L96A1":          ["Extended Mag + Warlord", "Variable Zoom", "None"],
+  "Galil":          ["Suppressor", "Extended Mag", "Dual Mag"],
+  "Commando":       ["Suppressor", "Extended Mag", "Red Dot Sight"],
+  "Dragunov":       ["Extended Mag", "ACOG Scope", "None"],
+  "HK21":           ["Extended Mag", "Grip", "ACOG Scope"],
+  "Stakeout":       ["Grip", "Extended Mag", "None"],
+  "Uzi":            ["Suppressor", "Extended Mag", "None"],
+  "M1911":          ["Extended Mag", "Suppressor", "None"],
+  // ── MW3 ──
+  "PP90M1":         ["Rapid Fire", "Silencer", "Kick"],
+  "MP7":            ["Rapid Fire + Silencer", "Extended Mag", "Foregrip"],
+  "Type 95":        ["Kick", "Rapid Fire", "Red Dot Sight"],
+  "ACR 6.8":        ["Kick", "Suppressor", "Extended Mag"],
+  "L118A":          ["Ballistics CPU", "Extended Mag", "None"],
+  "RSASS":          ["Ballistics CPU", "Thermal Scope", "Extended Mag"],
+  "FMG9":           ["Akimbo", "Extended Mag", "Suppressor"],
+  "G36C":           ["Red Dot Sight", "Suppressor", "Kick"],
+  "P90":            ["Extended Mag", "Rapid Fire", "Silencer"],
+  "M16A4_MW3":      ["Kick", "Red Dot Sight", "Suppressor"],
+  // ── BO2 ──
+  "MSMC":           ["Fast Mag", "Stock", "Suppressor"],
+  "AN-94":          ["Fast Mag", "Stock", "Suppressor"],
+  "DSR-50":         ["Ballistics CPU", "Fast Mag", "None"],
+  "Ballista":       ["Iron Lung (Wildcard)", "Ballistics CPU", "Fast Mag"],
+  "KSG":            ["Long Barrel", "Fast Mag", "Laser Sight"],
+  "PDW-57":         ["Extended Clip", "Suppressor", "Laser Sight"],
+  "Chicom CQB":     ["Extended Clip", "Fast Mag", "Laser Sight"],
+  "FAL OSW":        ["Select Fire", "Fast Mag", "Suppressor"],
+  "LMG HAMR":       ["Grip", "Extended Clip", "Fast Mag"],
+  "B23R":           ["Fast Mag", "Suppressor", "None"],
+  "Type 25":        ["Suppressor", "Fast Mag", "Stock"],
+  "M8A1":           ["Fast Mag", "Suppressor", "Stock"],
+  "Executioner":    ["Long Barrel", "Fast Mag", "None"],
+  // ── Ghosts ──
+  "AK-12":          ["Foregrip", "Extended Mags", "Red Dot Sight"],
+  "Honey Badger":   ["None (كاتم مدمج)", "Extended Mags", "Foregrip"],
+  "Vector CRB":     ["Extended Mags", "Foregrip", "Muzzle Brake"],
+  "Mtar-X":         ["Suppressor", "Extended Mags", "Foregrip"],
+  "Maverick":       ["Foregrip", "Red Dot Sight", "Extended Mags"],
+  "L115":           ["Variable Zoom", "Extended Mags", "None"],
+  "VKS":            ["Variable Zoom (صامت طبيعياً)", "Extended Mags", "None"],
+  // ── AW ──
+  "BAL-27":         ["Foregrip", "Extended Mag", "Advanced Rifling"],
+  "ASM1":           ["Foregrip", "Extended Mag", "Suppressor"],
+  "HBRa3":          ["Foregrip", "Silencer", "Extended Mag"],
+  "MORS":           ["Variable Zoom", "None", "None"],
+  "ARX-160":        ["Foregrip", "Extended Mag", "Suppressor"],
+  "IMR":            ["Foregrip", "Extended Mag", "Red Dot Sight"],
+  "AK12":           ["Foregrip", "Extended Mag", "Suppressor"],
+  "Atlas 45":       ["Quickdraw", "Extended Mag", "Suppressor"],
+  // ── BO3 ──
+  "Vesper":         ["Rapid Fire", "Extended Mag", "Suppressor"],
+  "KRM-262":        ["Long Barrel", "Fast Mag", "Grip Tape"],
+  "HVK-30":         ["High Caliber", "Suppressor", "Quickdraw Handle"],
+  "Man-O-War":      ["High Caliber", "Grip Tape", "Extended Mag"],
+  "KN-44":          ["Suppressor", "Quickdraw Handle", "Extended Mag"],
+  "M8A7":           ["High Caliber", "Suppressor", "Extended Mag"],
+  "Locus":          ["Ballistics CPU", "Variable Zoom", "Extended Mag"],
+  "Pharo":          ["Rapid Fire", "Extended Mag", "Suppressor"],
+  "Weevil":         ["Suppressor", "Extended Mag", "Quickdraw Handle"],
+};
+
+function getAttachments(weaponName: string): string[] {
+  return WEAPON_ATTACHMENTS[weaponName] ?? ["Red Dot Sight", "Extended Mag", "Suppressor"];
+}
+
+function getPerksBySize(size: string): string[] {
+  if (size.includes("صغير جداً")) return ["🟢 Flak Jacket", "🔵 Toughness", "🔴 Dead Silence"];
+  if (size.includes("صغير"))       return ["🟢 Lightweight", "🔵 Toughness", "🔴 Dead Silence"];
+  if (size.includes("متوسط-كبير")) return ["🟢 Ghost", "🔵 Quick Draw", "🔴 Dead Silence"];
+  if (size.includes("كبير جداً")) return ["🟢 Ghost / Cold Blooded", "🔵 Quick Draw", "🔴 Ninja"];
+  if (size.includes("كبير"))       return ["🟢 Ghost", "🔵 Quick Draw", "🔴 Ninja"];
+  return ["🟢 Hardline / Ghost", "🔵 Quick Draw", "🔴 Dead Silence"];
+}
+
 export const gamingMapsCommands = [
   {
     data: new SlashCommandBuilder()
       .setName("map")
-      .setDescription("🗺️ ماب عشوائي مع صورته وأفضل الأسلحة / Random CoD map with image and best weapons")
+      .setDescription("🗺️ ماب عشوائي مع صورته وأفضل الأسلحة والبيركات والإضافات")
       .addStringOption(opt =>
         opt.setName("game")
-          .setDescription("اختار لعبة CoD / Choose a CoD game")
+          .setDescription("اختار لعبة CoD")
           .setRequired(true)
           .addChoices(
             { name: "🎯 CoD 4: Modern Warfare (2007)", value: "cod4" },
@@ -1219,38 +1334,39 @@ export const gamingMapsCommands = [
 
       const map = game.maps[Math.floor(Math.random() * game.maps.length)]!;
 
-      const weaponsText = map.weapons
-        .map((w, i) => `\`${i + 1}.\` **${w.name}** — ${w.why}`)
-        .join("\n");
+      const bestWeapon   = map.weapons[0]!;
+      const altWeapons   = map.weapons.slice(1);
+      const attachments  = getAttachments(bestWeapon.name);
+      const perks        = getPerksBySize(map.size);
+      const tipsText     = map.tips.map((t, i) => `${i + 1}. ${t}`).join("\n");
+      const altText      = altWeapons.map(w => `• **${w.name}** — ${w.why}`).join("\n");
+      const attachText   = attachments.map((a, i) => `${["1️⃣","2️⃣","3️⃣"][i] ?? "•"} ${a}`).join("\n");
 
-      const tipsText = map.tips
-        .map((t, i) => `${i + 1}. ${t}`)
-        .join("\n");
-
+      // Embed #1 — Game header + Map image
       const embed = new EmbedBuilder()
+        .setAuthor({ name: `${game.label} • ${game.year}`, iconURL: game.thumbnail })
         .setTitle(`🗺️ ${map.name}`)
-        .setDescription(`> **${map.desc}**`)
+        .setDescription(`> ${map.desc}`)
         .setColor(game.color)
         .setImage(map.image)
         .setThumbnail(game.thumbnail)
         .addFields(
-          { name: "🎮 اللعبة", value: `${game.label} (${game.year})`, inline: true },
           { name: "📐 حجم الماب", value: map.size, inline: true },
+          { name: "🎮 اللعبة", value: `${game.label}`, inline: true },
           { name: "\u200b", value: "\u200b", inline: true },
-          { name: "🔫 أفضل الأسلحة", value: weaponsText, inline: false },
+
+          { name: "🏆 أفضل سلاح للماب", value: `**${bestWeapon.name}**\n*${bestWeapon.why}*`, inline: false },
+          { name: "🔧 الإضافات (Attachments)", value: attachText, inline: true },
+          { name: "⚡ البيركات (Perks)", value: perks.join("\n"), inline: true },
+          { name: "\u200b", value: "\u200b", inline: true },
+
+          { name: "🔫 أسلحة بديلة", value: altText || "—", inline: false },
           { name: "💡 نصائح احترافية", value: tipsText, inline: false },
         )
-        .setFooter({ text: "Bot_SUKz • CoD Map Picker • اكتب /map مرة ثانية لماب آخر عشوائي" })
+        .setFooter({ text: "Bot_SUKz • اكتب /map مرة ثانية للحصول على ماب آخر عشوائي" })
         .setTimestamp();
 
-      const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-          .setLabel("📖 شوف الماب على الويكي")
-          .setStyle(ButtonStyle.Link)
-          .setURL(map.wikiUrl),
-      );
-
-      await interaction.reply({ embeds: [embed], components: [row] });
+      await interaction.reply({ embeds: [embed] });
     },
   },
 
