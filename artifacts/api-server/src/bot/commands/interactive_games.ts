@@ -9,6 +9,10 @@ import {
   TextChannel,
 } from "discord.js";
 
+// ══════════════════════════════════════════
+//              SHARED DATA POOLS
+// ══════════════════════════════════════════
+
 const typingTexts = [
   "السلام عليكم يا أهل السيرفر",
   "من صبر ظفر وكل صعب يهون",
@@ -25,6 +29,44 @@ const typingTexts = [
   "الاستراتيجية تغلب القوة في كل الأوقات",
   "بالتدريب المستمر يصبح المستحيل ممكناً",
   "النصر حليف من يصبر على الشدائد",
+  "اللاعب الحقيقي لا يستسلم أبداً",
+  "الفوز يحتاج تركيز وسرعة واستراتيجية",
+  "مع كل هزيمة درس يقربك من النصر",
+];
+
+const fastestWords = [
+  "نار","ماء","جبل","نجمة","قمر","شمس","بحر","ريح","وردة","عقاب",
+  "أسد","ذئب","نمر","صقر","سيف","درع","قلعة","معركة","نصر","فوز",
+  "كود","سيرفر","بوت","لعبة","فريق","تحدي","قناص","هجوم","دفاع","ملك",
+];
+
+const triviaQuestions = [
+  { q: "كم عدد سور القرآن الكريم؟", a: "114" },
+  { q: "ما هي عاصمة البرازيل؟", a: "برازيليا" },
+  { q: "من اخترع الهاتف؟", a: "ألكسندر غراهام بيل" },
+  { q: "ما أكبر كوكب في المجموعة الشمسية؟", a: "المشتري" },
+  { q: "كم عدد أضلع الإنسان؟", a: "24" },
+  { q: "ما أسرع حيوان بري في العالم؟", a: "الفهد" },
+  { q: "ما عاصمة اليابان؟", a: "طوكيو" },
+  { q: "كم يساوي مربع 12؟", a: "144" },
+  { q: "ما أطول نهر في العالم؟", a: "النيل" },
+  { q: "من رسم الموناليزا؟", a: "ليوناردو دافنشي" },
+  { q: "كم عدد ألوان قوس قزح؟", a: "7" },
+  { q: "ما أصغر دولة في العالم؟", a: "الفاتيكان" },
+  { q: "كم كوكباً في المجموعة الشمسية؟", a: "8" },
+  { q: "ما لغة البرمجة الأكثر شيوعاً؟", a: "بايثون" },
+  { q: "كم ساعة في الأسبوع؟", a: "168" },
+];
+
+const mysteryPersons = [
+  { name: "رونالدو", hints: ["لاعب كرة قدم محترف", "جنسيته برتغالية", "فاز بالبالون دور 5 مرات"] },
+  { name: "إيلون ماسك", hints: ["مليردير عالمي", "عنده شركة سيارات كهربائية", "اشترى منصة تويتر"] },
+  { name: "بروس لي", hints: ["فنان قتال أسطوري", "من أصل صيني وأمريكي", "مات وعمره 32 سنة"] },
+  { name: "نيل أرمسترونغ", hints: ["أمريكي الجنسية", "رائد فضاء", "أول إنسان يمشي على سطح القمر"] },
+  { name: "محمد علي كلاي", hints: ["بطل ملاكمة عالمي", "غيّر اسمه بعد اعتناق الإسلام", "لقبه الأعظم"] },
+  { name: "ستيف جوبز", hints: ["مؤسس شركة Apple", "أمريكي من أصل سوري", "توفي سنة 2011"] },
+  { name: "ميسي", hints: ["لاعب كرة قدم أرجنتيني", "لعب في برشلونة 20 سنة", "فاز بكأس العالم 2022"] },
+  { name: "إبراهيم الفقي", hints: ["خبير تطوير ذات مصري", "كاتب ومحاضر شهير", "توفي سنة 2012"] },
 ];
 
 const mafiaRoles = [
@@ -33,9 +75,9 @@ const mafiaRoles = [
   { name: "🏥 طبيب", desc: "دورك تحمي أحد اللاعبين من القتل كل ليلة" },
   { name: "👁️ محقق", desc: "دورك تعرف إذا اللاعب بريء أو مذنب" },
   { name: "👤 مواطن", desc: "دورك تكتشف المافيا عن طريق التصويت" },
-  { name: "🕵️ جاسوس", desc: "تعرف دور لاعب كل ليلة لكن لا تقدر تحكي لأحد" },
-  { name: "💣 قناص", desc: "تقدر تقتل لاعب واحد بس طوال اللعبة" },
-  { name: "🎭 محرض", desc: "تقدر تعطي صوتين في التصويت مرة واحدة" },
+  { name: "🕵️ جاسوس", desc: "تعرف دور لاعب كل ليلة لكن ما تقدر تحكي لأحد" },
+  { name: "💣 قناص", desc: "تقدر تقتل لاعب واحد بس طوال اللعبة كلها" },
+  { name: "🎭 محرض", desc: "تقدر تعطي صوتين في التصويت مرة واحدة فقط" },
 ];
 
 const wouldYouRather = [
@@ -48,7 +90,7 @@ const wouldYouRather = [
   "تكون قوي جسدياً أو قوي عقلياً؟",
   "تخسر ذاكرتك كلها أو تخسر جميع أصدقائك؟",
   "تعيش بلا موسيقى أو بلا أفلام طوال حياتك؟",
-  "تكون بارد المزاج دائماً أو حار المزاج دائماً؟",
+  "تنام 3 ساعات وتكون نشيط أو تنام 12 ساعة وتكون كسلان؟",
 ];
 
 const truths = [
@@ -63,10 +105,10 @@ const truths = [
 const dares = [
   "اكتب رسالة محرجة لآخر شخص في قائمة جهات اتصالك",
   "غيّر اسمك في الديسكورد لـ 'ملك الحشرات' لمدة 10 دقائق",
-  "أرسل 10 هجة بالشات متتالية بدون توقف",
+  "أرسل 10 هجة في الشات متتالية بدون توقف",
   "قلّد صوت إعلان تلفزيوني واكتبه هنا",
   "اكتب أغبى نكتة تعرفها الحين",
-  "أمدح السيرفر في 5 أسطر بدون توقف",
+  "امدح السيرفر في 5 أسطر بدون توقف",
 ];
 
 const roulettePunishments = [
@@ -76,36 +118,21 @@ const roulettePunishments = [
   "تبعث سلام لأكبر شخص في السيرفر 👋",
   "تحكي نكتة وكلهم يقيّمونها 🎭",
   "تكتب 5 أسطر تمدح فيها البوت 🤖",
-  "تقلد شخصية كرتونية في الشات 🦸",
   "تبقى صامت في الفويس 5 دقائق 🔇",
+  "ترسل GIF محرج في الشات 😬",
 ];
 
 const facts = [
   "النمل لا ينام أبداً طوال حياته 🐜",
   "القلب يضخ ما يكفي من الدم ليملأ مسبح أولمبي خلال عمر الإنسان 💓",
-  "الأخطبوط عنده 3 قلوب وزرقاء الدم 🐙",
+  "الأخطبوط عنده 3 قلوب ودمه أزرق اللون 🐙",
   "العسل لا يفسد أبداً — وُجد عسل عمره 3000 سنة في مصر 🍯",
   "الليمون يحتوي على سكر أكثر من الفراولة 🍋",
-  "قلب الروبيان موجود في رأسه 🦐",
-  "الفيل الوحيد الحيوان الذي لا يقدر يقفز 🐘",
+  "قلب الروبيان موجود في رأسه وليس صدره 🦐",
+  "الفيل الحيوان الوحيد الذي لا يقدر يقفز 🐘",
   "الغيوم تزن ملايين الأطنان رغم أنها تطير 🌩️",
-];
-
-const mysteryPersons = [
-  { name: "رونالدو", hints: ["لاعب كرة قدم محترف", "جنسيته برتغالية", "فاز بالبالون دور 5 مرات"] },
-  { name: "إيلون ماسك", hints: ["مليردير عالمي", "عنده شركة سيارات كهربائية", "اشترى منصة تويتر"] },
-  { name: "بروس لي", hints: ["فنان قتال أسطوري", "من أصل صيني وأمريكي", "مات وعمره 32 سنة"] },
-  { name: "نيل أرمسترونغ", hints: ["أمريكي الجنسية", "رائد فضاء ناسا", "أول إنسان يمشي على سطح القمر"] },
-  { name: "محمد علي كلاي", hints: ["أمريكي من أصل أفريقي", "بطل ملاكمة عالمي", "غيّر اسمه بعد اعتناق الإسلام"] },
-];
-
-const triviaQuestions = [
-  { q: "كم عدد سور القرآن الكريم؟", a: "114" },
-  { q: "ما هي عاصمة البرازيل؟", a: "برازيليا" },
-  { q: "من اخترع الهاتف؟", a: "ألكسندر غراهام بيل" },
-  { q: "ما أكبر كوكب في المجموعة الشمسية؟", a: "المشتري" },
-  { q: "كم عدد أضلع الإنسان؟", a: "24" },
-  { q: "ما أسرع حيوان بري في العالم؟", a: "الفهد" },
+  "الإنسان الوحيد الحيوان الذي ينام على ظهره دائماً 🛌",
+  "جلد الزرافة مثل بصمة الإصبع — لا يتكرر 🦒",
 ];
 
 const storyStarters = [
@@ -125,6 +152,187 @@ const challenges = [
   "امدح شخصاً في السيرفر بجملة واحدة رائعة 🌟",
 ];
 
+// ══════════════════════════════════════════
+//           LOOP ENGINE (CORE)
+// ══════════════════════════════════════════
+
+interface LoopRound {
+  embed: EmbedBuilder;
+  filter: (content: string) => boolean;
+  onSuccess: (content: string, elapsedSec: string) => string;
+  onFail: (content: string) => string | null; // null = keep trying, string = show msg
+  timeout: number;
+}
+
+async function runGameLoop(
+  channel: TextChannel,
+  userId: string,
+  username: string,
+  gameName: string,
+  generateRound: (round: number) => LoopRound,
+): Promise<void> {
+  let misses = 0;
+  const MAX_MISSES = 2;
+  let round = 1;
+
+  while (true) {
+    const config = generateRound(round);
+
+    await channel.send({ embeds: [config.embed] });
+
+    const startTime = Date.now();
+
+    try {
+      const collected = await channel.awaitMessages({
+        filter: m => m.author.id === userId,
+        max: 1,
+        time: config.timeout,
+        errors: ["time"],
+      });
+
+      const msg = collected.first()!;
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+
+      if (config.filter(msg.content)) {
+        misses = 0;
+        const successText = config.onSuccess(msg.content, elapsed);
+        await msg.reply(successText);
+        round++;
+        await new Promise(r => setTimeout(r, 1800));
+      } else {
+        const failText = config.onFail(msg.content);
+        if (failText) {
+          await msg.reply(failText);
+        }
+        round++;
+        await new Promise(r => setTimeout(r, 1500));
+      }
+
+    } catch {
+      misses++;
+      if (misses >= MAX_MISSES) {
+        const embed = new EmbedBuilder()
+          .setTitle("🛑 انتهت اللعبة")
+          .setDescription(
+            `يا **${username}** تجاهلت البوت **${MAX_MISSES} مرات** متتالية!\n\n` +
+            `📊 **وصلت إلى الجولة رقم:** ${round}\n` +
+            `⏱️ **سبب الإيقاف:** عدم الرد على الوقت المحدد مرتين\n\n` +
+            `اكتب \`/games\` من جديد لتبدأ لعبة جديدة! 🎮`
+          )
+          .setColor(0xff0000)
+          .setFooter({ text: `${gameName} • Bot_SUKz` });
+        await channel.send({ embeds: [embed] });
+        break;
+      } else {
+        await channel.send(
+          `⏰ **${username}** انتهى الوقت! (تحذير ${misses}/${MAX_MISSES})\nالجولة التالية بعد ثانيتين...`
+        );
+        round++;
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+//              GAME DEFINITIONS
+// ══════════════════════════════════════════
+
+function getTypingRound(round: number): LoopRound {
+  const text = typingTexts[Math.floor(Math.random() * typingTexts.length)]!;
+  return {
+    embed: new EmbedBuilder()
+      .setTitle(`⚡ سرعة الكتابة — الجولة ${round}`)
+      .setDescription(`اكتب النص التالي بأسرع وقت:\n\n\`\`\`${text}\`\`\``)
+      .setColor(0xffff00)
+      .setFooter({ text: "⏱️ عندك 30 ثانية!" }),
+    filter: (c) => c === text,
+    onSuccess: (_, elapsed) => `✅ **صح! كتبتها في ${elapsed} ثانية** 🎉 — الجولة التالية قادمة...`,
+    onFail: () => `❌ **غلط!** النص المطلوب كان مختلفاً — الجولة التالية...`,
+    timeout: 30000,
+  };
+}
+
+function getFastestRound(round: number): LoopRound {
+  const word = fastestWords[Math.floor(Math.random() * fastestWords.length)]!;
+  return {
+    embed: new EmbedBuilder()
+      .setTitle(`⚡ من الأسرع؟ — الجولة ${round}`)
+      .setDescription(`اكتب هذي الكلمة بأسرع ما تقدر:\n\n# ${word}`)
+      .setColor(0xffff00)
+      .setFooter({ text: "⏱️ عندك 10 ثواني!" }),
+    filter: (c) => c === word,
+    onSuccess: (_, elapsed) => `⚡ **صح! كتبتها في ${elapsed} ثانية** 🏆 — الجولة التالية...`,
+    onFail: () => `❌ **غلط!** الكلمة المطلوبة كانت مختلفة — الجولة التالية...`,
+    timeout: 10000,
+  };
+}
+
+function getGuessRound(round: number): LoopRound {
+  const num = Math.floor(Math.random() * 100) + 1;
+  return {
+    embed: new EmbedBuilder()
+      .setTitle(`🔢 خمّن الرقم — الجولة ${round}`)
+      .setDescription(`خمّن رقم بين **1 و100**!\n\n_لديك تلميح بعد كل محاولة_`)
+      .setColor(0x1abc9c)
+      .setFooter({ text: "⏱️ عندك 20 ثانية للإجابة!" }),
+    filter: (c) => parseInt(c) === num,
+    onSuccess: (_, elapsed) => `✅ **صح! الرقم ${num} في ${elapsed} ثانية** 🎉 — الجولة التالية...`,
+    onFail: (c) => {
+      const guess = parseInt(c);
+      if (isNaN(guess)) return null;
+      return guess < num ? `📈 أكبر من **${guess}**! حاول مجدداً...` : `📉 أصغر من **${guess}**! حاول مجدداً...`;
+    },
+    timeout: 20000,
+  };
+}
+
+function getTriviaRound(round: number): LoopRound {
+  const q = triviaQuestions[Math.floor(Math.random() * triviaQuestions.length)]!;
+  return {
+    embed: new EmbedBuilder()
+      .setTitle(`🧠 سؤال ثقافي — الجولة ${round}`)
+      .setDescription(`**${q.q}**`)
+      .setColor(0x3498db)
+      .setFooter({ text: "⏱️ عندك 15 ثانية للإجابة!" }),
+    filter: (c) => c.includes(q.a) || q.a.includes(c),
+    onSuccess: () => `✅ **صح! الجواب: ${q.a}** 🎉 — السؤال التالي قادم...`,
+    onFail: () => `❌ **غلط! الجواب الصحيح: ${q.a}** — السؤال التالي...`,
+    timeout: 15000,
+  };
+}
+
+function getMysteryRound(round: number): LoopRound {
+  const person = mysteryPersons[Math.floor(Math.random() * mysteryPersons.length)]!;
+  return {
+    embed: new EmbedBuilder()
+      .setTitle(`🌀 خمّن الشخصية — الجولة ${round}`)
+      .setDescription(
+        `**الأدلة:**\n` +
+        person.hints.map((h, i) => `${i + 1}. ${h}`).join("\n") +
+        `\n\n_اكتب اسم الشخص في الشات_`
+      )
+      .setColor(0x2c3e50)
+      .setFooter({ text: "⏱️ عندك 20 ثانية!" }),
+    filter: (c) => person.name.split(" ").some(w => c.includes(w)),
+    onSuccess: () => `✅ **صح! هو ${person.name}** 🎉 — الشخصية التالية قادمة...`,
+    onFail: () => `❌ **غلط! الجواب: ${person.name}** — الجولة التالية...`,
+    timeout: 20000,
+  };
+}
+
+// ══════════════════════════════════════════
+//           ONE-SHOT GAME HELPERS
+// ══════════════════════════════════════════
+
+function oneShotEmbed(title: string, desc: string, color: number): EmbedBuilder {
+  return new EmbedBuilder().setTitle(title).setDescription(desc).setColor(color);
+}
+
+// ══════════════════════════════════════════
+//              MAIN COMMAND
+// ══════════════════════════════════════════
+
 export const interactiveGamesCommands = [
   {
     data: new SlashCommandBuilder()
@@ -135,23 +343,23 @@ export const interactiveGamesCommands = [
         .setCustomId("game_select")
         .setPlaceholder("🎮 اختر لعبة...")
         .addOptions(
-          new StringSelectMenuOptionBuilder().setLabel("⚡ سرعة الكتابة").setValue("typing").setDescription("اكتب النص قبل انتهاء الوقت"),
-          new StringSelectMenuOptionBuilder().setLabel("🔴 مافيا").setValue("mafia").setDescription("توزيع أدوار عشوائية للمافيا"),
+          new StringSelectMenuOptionBuilder().setLabel("⚡ سرعة الكتابة").setValue("typing").setDescription("اكتب النص — تلقائي بلا توقف"),
+          new StringSelectMenuOptionBuilder().setLabel("⚡ من الأسرع؟").setValue("fastest").setDescription("اكتب الكلمة — تلقائي بلا توقف"),
+          new StringSelectMenuOptionBuilder().setLabel("🔢 خمّن الرقم").setValue("guess").setDescription("رقم بين 1 و100 — تلقائي"),
+          new StringSelectMenuOptionBuilder().setLabel("🧠 سؤال ثقافي").setValue("trivia").setDescription("أسئلة متنوعة — تلقائي"),
+          new StringSelectMenuOptionBuilder().setLabel("🌀 خمّن الشخصية").setValue("mystery").setDescription("أدلة وخمّن المشهور — تلقائي"),
+          new StringSelectMenuOptionBuilder().setLabel("🔴 مافيا").setValue("mafia").setDescription("توزيع أدوار عشوائية"),
           new StringSelectMenuOptionBuilder().setLabel("🎡 روليت العقوبات").setValue("roulette").setDescription("عجلة عقوبات عشوائية"),
           new StringSelectMenuOptionBuilder().setLabel("🤔 ماذا تفضل؟").setValue("wyr").setDescription("اختر بين خيارين صعبين"),
           new StringSelectMenuOptionBuilder().setLabel("🎭 صح أم جرأة").setValue("tod").setDescription("صحيح أو جرأة عشوائية"),
-          new StringSelectMenuOptionBuilder().setLabel("🎲 النرد").setValue("dice").setDescription("ارمي النرد وأعلى رقم يفوز"),
+          new StringSelectMenuOptionBuilder().setLabel("🎲 النرد").setValue("dice").setDescription("ارمي النرد"),
           new StringSelectMenuOptionBuilder().setLabel("🪙 عملة").setValue("coin").setDescription("صورة أو كتابة"),
-          new StringSelectMenuOptionBuilder().setLabel("🔢 خمّن الرقم").setValue("guess").setDescription("رقم بين 1 و100 — 3 محاولات"),
           new StringSelectMenuOptionBuilder().setLabel("❓ معلومة غريبة").setValue("fact").setDescription("معلومة غريبة وصحيحة"),
           new StringSelectMenuOptionBuilder().setLabel("🎯 تحدي اليوم").setValue("challenge").setDescription("تحدي يومي عشوائي"),
           new StringSelectMenuOptionBuilder().setLabel("🃏 بلاك جاك سريع").setValue("blackjack").setDescription("21 بدون رهان"),
           new StringSelectMenuOptionBuilder().setLabel("🔠 الحرف المشترك").setValue("letter").setDescription("كل لاعب يكمل بنفس الحرف"),
-          new StringSelectMenuOptionBuilder().setLabel("🌀 الشخصية الغامضة").setValue("mystery").setDescription("خمّن أنا مين؟"),
-          new StringSelectMenuOptionBuilder().setLabel("⚡ من الأسرع؟").setValue("fastest").setDescription("اكتب الكلمة قبل غيرك"),
-          new StringSelectMenuOptionBuilder().setLabel("🎪 عقوبة عشوائية").setValue("random_dare").setDescription("عقوبة عشوائية من القائمة"),
-          new StringSelectMenuOptionBuilder().setLabel("🧠 سؤال ثقافي").setValue("trivia").setDescription("سؤال ثقافي سريع"),
-          new StringSelectMenuOptionBuilder().setLabel("💣 الكلمة المحظورة").setValue("bomb").setDescription("لا تقول الكلمة المحظورة"),
+          new StringSelectMenuOptionBuilder().setLabel("🎪 عقوبة عشوائية").setValue("random_dare").setDescription("عقوبة عشوائية"),
+          new StringSelectMenuOptionBuilder().setLabel("💣 الكلمة المحظورة").setValue("bomb").setDescription("لا تقل الكلمة المحظورة"),
           new StringSelectMenuOptionBuilder().setLabel("👥 فرق عشوائية").setValue("teams").setDescription("قسّم الأعضاء لفريقين"),
           new StringSelectMenuOptionBuilder().setLabel("🎰 جاكبوت").setValue("jackpot").setDescription("ربح أو خسارة بالحظ"),
           new StringSelectMenuOptionBuilder().setLabel("📝 قصة جماعية").setValue("story").setDescription("كمّل القصة بجملة واحدة"),
@@ -161,7 +369,11 @@ export const interactiveGamesCommands = [
 
       const embed = new EmbedBuilder()
         .setTitle("🎮 قائمة الألعاب التفاعلية")
-        .setDescription("اختر لعبة من القائمة وابدأ اللعب فوراً!\n\n⚡ **20 لعبة** جاهزة لك")
+        .setDescription(
+          "اختر لعبة من القائمة وابدأ اللعب فوراً!\n\n" +
+          "⚡ **الألعاب التلقائية** — البوت يكمل بلا توقف حتى تتجاهله مرتين\n" +
+          "🎯 **الألعاب الأخرى** — جولة واحدة ممتعة"
+        )
         .setColor(0x5865f2)
         .setFooter({ text: "Bot_SUKz • Games" });
 
@@ -177,66 +389,96 @@ export const interactiveGamesCommands = [
       collector.on("collect", async i => {
         const game = i.values[0]!;
         await i.deferUpdate();
+        await i.editReply({ components: [] });
+
         const channel = interaction.channel as TextChannel;
+        const userId = interaction.user.id;
+        const username = interaction.user.username;
+
+        // ─── LOOP GAMES ───────────────────────────────────────
+        if (game === "typing") {
+          const startEmbed = new EmbedBuilder()
+            .setTitle("⚡ سرعة الكتابة — بدأت!")
+            .setDescription(`يا **${username}** — البوت راح يرسل لك نصوص بلا توقف!\nاكتب كل نص بأسرع ما تقدر.\n\n🛑 لو ما رددت مرتين البوت يوقف ويخبرك السبب.`)
+            .setColor(0xffff00);
+          await channel.send({ embeds: [startEmbed] });
+          await new Promise(r => setTimeout(r, 1500));
+          await runGameLoop(channel, userId, username, "سرعة الكتابة", getTypingRound);
+          return;
+        }
+
+        if (game === "fastest") {
+          const startEmbed = new EmbedBuilder()
+            .setTitle("⚡ من الأسرع؟ — بدأت!")
+            .setDescription(`يا **${username}** — البوت راح يرسل كلمات بلا توقف!\nاكتب كل كلمة بأسرع ما تقدر.\n\n🛑 لو ما رددت مرتين البوت يوقف ويخبرك السبب.`)
+            .setColor(0xffff00);
+          await channel.send({ embeds: [startEmbed] });
+          await new Promise(r => setTimeout(r, 1500));
+          await runGameLoop(channel, userId, username, "من الأسرع؟", getFastestRound);
+          return;
+        }
+
+        if (game === "guess") {
+          const startEmbed = new EmbedBuilder()
+            .setTitle("🔢 خمّن الرقم — بدأت!")
+            .setDescription(`يا **${username}** — البوت راح يختار أرقام بلا توقف!\nخمّن كل رقم بين 1 و100.\n\n🛑 لو ما رددت مرتين البوت يوقف ويخبرك السبب.`)
+            .setColor(0x1abc9c);
+          await channel.send({ embeds: [startEmbed] });
+          await new Promise(r => setTimeout(r, 1500));
+          await runGameLoop(channel, userId, username, "خمّن الرقم", getGuessRound);
+          return;
+        }
+
+        if (game === "trivia") {
+          const startEmbed = new EmbedBuilder()
+            .setTitle("🧠 أسئلة ثقافية — بدأت!")
+            .setDescription(`يا **${username}** — البوت راح يسألك أسئلة بلا توقف!\nارد بأسرع ما تقدر.\n\n🛑 لو ما رددت مرتين البوت يوقف ويخبرك السبب.`)
+            .setColor(0x3498db);
+          await channel.send({ embeds: [startEmbed] });
+          await new Promise(r => setTimeout(r, 1500));
+          await runGameLoop(channel, userId, username, "الأسئلة الثقافية", getTriviaRound);
+          return;
+        }
+
+        if (game === "mystery") {
+          const startEmbed = new EmbedBuilder()
+            .setTitle("🌀 خمّن الشخصية — بدأت!")
+            .setDescription(`يا **${username}** — البوت راح يعطيك أدلة بلا توقف!\nخمّن الشخصية من الأدلة.\n\n🛑 لو ما رددت مرتين البوت يوقف ويخبرك السبب.`)
+            .setColor(0x2c3e50);
+          await channel.send({ embeds: [startEmbed] });
+          await new Promise(r => setTimeout(r, 1500));
+          await runGameLoop(channel, userId, username, "خمّن الشخصية", getMysteryRound);
+          return;
+        }
+
+        // ─── ONE-SHOT GAMES ───────────────────────────────────
 
         switch (game) {
-
-          case "typing": {
-            const text = typingTexts[Math.floor(Math.random() * typingTexts.length)]!;
-            const startEmbed = new EmbedBuilder()
-              .setTitle("⚡ سرعة الكتابة")
-              .setDescription(`اكتب النص التالي بأسرع وقت!\n\n\`\`\`${text}\`\`\``)
-              .setColor(0xffff00)
-              .setFooter({ text: "⏱️ عندك 30 ثانية!" });
-            await i.editReply({ embeds: [startEmbed], components: [] });
-            const start = Date.now();
-            try {
-              const collected = await channel.awaitMessages({
-                filter: m => m.author.id === interaction.user.id && m.content === text,
-                max: 1,
-                time: 30000,
-                errors: ["time"],
-              });
-              const elapsed = ((Date.now() - start) / 1000).toFixed(2);
-              await collected.first()!.reply(`✅ **صح!** كتبتها في **${elapsed} ثانية** 🎉`);
-            } catch {
-              await channel.send(`⏰ ${interaction.user} انتهى الوقت! النص كان:\n\`${text}\``);
-            }
-            break;
-          }
-
           case "mafia": {
             const shuffled = [...mafiaRoles].sort(() => Math.random() - 0.5).slice(0, 6);
             const embed = new EmbedBuilder()
               .setTitle("🔴 لعبة المافيا — توزيع الأدوار")
-              .setDescription("وزّع هذه الأدوار على اللاعبين بشكل سري — كل واحد يعرف دوره فقط!")
+              .setDescription("وزّع هذه الأدوار على اللاعبين بشكل سري!")
               .setColor(0xff0000);
             shuffled.forEach((role, idx) => {
               embed.addFields({ name: `اللاعب ${idx + 1}`, value: `${role.name}\n*${role.desc}*`, inline: true });
             });
-            embed.setFooter({ text: "قواعد المافيا: ليل → المافيا تقتل | نهار → الكل يصوّت" });
-            await i.editReply({ embeds: [embed], components: [] });
+            embed.setFooter({ text: "ليل → مافيا تقتل | نهار → كلهم يصوّتون" });
+            await channel.send({ embeds: [embed] });
             break;
           }
 
           case "roulette": {
-            const punishment = roulettePunishments[Math.floor(Math.random() * roulettePunishments.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("🎡 روليت العقوبات")
-              .setDescription(`العجلة دارت...\n\n**عقوبتك يا ${interaction.user.username}:**\n${punishment}`)
-              .setColor(0xff6b35);
-            await i.editReply({ embeds: [embed], components: [] });
+            const p = roulettePunishments[Math.floor(Math.random() * roulettePunishments.length)]!;
+            await channel.send({ embeds: [oneShotEmbed("🎡 روليت العقوبات", `العجلة دارت...\n\n**عقوبتك يا ${username}:**\n${p}`, 0xff6b35)] });
             break;
           }
 
           case "wyr": {
-            const question = wouldYouRather[Math.floor(Math.random() * wouldYouRather.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("🤔 ماذا تفضل؟")
-              .setDescription(question)
-              .setColor(0x9b59b6)
-              .setFooter({ text: "رد في الشات باختيارك!" });
-            await i.editReply({ embeds: [embed], components: [] });
+            const q = wouldYouRather[Math.floor(Math.random() * wouldYouRather.length)]!;
+            const embed = oneShotEmbed("🤔 ماذا تفضل؟", q, 0x9b59b6);
+            embed.setFooter({ text: "رد في الشات باختيارك!" });
+            await channel.send({ embeds: [embed] });
             break;
           }
 
@@ -244,92 +486,32 @@ export const interactiveGamesCommands = [
             const isTruth = Math.random() < 0.5;
             const list = isTruth ? truths : dares;
             const content = list[Math.floor(Math.random() * list.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle(isTruth ? "💬 صح (Truth)" : "🎭 جرأة (Dare)")
-              .setDescription(content)
-              .setColor(isTruth ? 0x3498db : 0xe74c3c);
-            await i.editReply({ embeds: [embed], components: [] });
+            await channel.send({ embeds: [oneShotEmbed(isTruth ? "💬 صح (Truth)" : "🎭 جرأة (Dare)", content, isTruth ? 0x3498db : 0xe74c3c)] });
             break;
           }
 
           case "dice": {
             const d1 = Math.floor(Math.random() * 6) + 1;
             const d2 = Math.floor(Math.random() * 6) + 1;
-            const embed = new EmbedBuilder()
-              .setTitle("🎲 النرد")
-              .setDescription(`رميت النرد مرتين:\n\n🎲 **${d1}** + 🎲 **${d2}** = **${d1 + d2}**`)
-              .setColor(0x2ecc71);
-            await i.editReply({ embeds: [embed], components: [] });
+            await channel.send({ embeds: [oneShotEmbed("🎲 النرد", `رميت النرد مرتين:\n\n🎲 **${d1}** + 🎲 **${d2}** = **${d1 + d2}**`, 0x2ecc71)] });
             break;
           }
 
           case "coin": {
             const result = Math.random() < 0.5 ? "🦅 صورة" : "✍️ كتابة";
-            const embed = new EmbedBuilder()
-              .setTitle("🪙 رمي العملة")
-              .setDescription(`النتيجة: **${result}**`)
-              .setColor(0xf1c40f);
-            await i.editReply({ embeds: [embed], components: [] });
-            break;
-          }
-
-          case "guess": {
-            const num = Math.floor(Math.random() * 100) + 1;
-            const embed = new EmbedBuilder()
-              .setTitle("🔢 خمّن الرقم")
-              .setDescription("خمّن رقم بين **1 و100** — عندك **3 محاولات**!")
-              .setColor(0x1abc9c);
-            await i.editReply({ embeds: [embed], components: [] });
-
-            let attempts = 0;
-            const tryCollect = async (): Promise<void> => {
-              if (attempts >= 3) {
-                await channel.send(`❌ انتهت محاولاتك! الرقم كان **${num}**`);
-                return;
-              }
-              try {
-                const collected = await channel.awaitMessages({
-                  filter: m => m.author.id === interaction.user.id && !isNaN(parseInt(m.content)),
-                  max: 1,
-                  time: 15000,
-                  errors: ["time"],
-                });
-                const msg = collected.first()!;
-                const guess = parseInt(msg.content);
-                attempts++;
-                if (guess === num) {
-                  await msg.reply(`✅ **صح!** الرقم **${num}** 🎉 في المحاولة رقم ${attempts}`);
-                } else if (attempts < 3) {
-                  await msg.reply(guess < num ? `📈 أكبر! (${attempts}/3)` : `📉 أصغر! (${attempts}/3)`);
-                  await tryCollect();
-                } else {
-                  await msg.reply(`❌ انتهت المحاولات! الرقم كان **${num}**`);
-                }
-              } catch {
-                await channel.send(`⏰ انتهى الوقت! الرقم كان **${num}**`);
-              }
-            };
-            await tryCollect();
+            await channel.send({ embeds: [oneShotEmbed("🪙 رمي العملة", `النتيجة: **${result}**`, 0xf1c40f)] });
             break;
           }
 
           case "fact": {
             const fact = facts[Math.floor(Math.random() * facts.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("❓ معلومة غريبة وصحيحة")
-              .setDescription(fact)
-              .setColor(0xe67e22);
-            await i.editReply({ embeds: [embed], components: [] });
+            await channel.send({ embeds: [oneShotEmbed("❓ معلومة غريبة وصحيحة", fact, 0xe67e22)] });
             break;
           }
 
           case "challenge": {
             const c = challenges[Math.floor(Math.random() * challenges.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("🎯 تحدي اليوم")
-              .setDescription(c)
-              .setColor(0x1abc9c);
-            await i.editReply({ embeds: [embed], components: [] });
+            await channel.send({ embeds: [oneShotEmbed("🎯 تحدي اليوم", c, 0x1abc9c)] });
             break;
           }
 
@@ -351,150 +533,52 @@ export const interactiveGamesCommands = [
                 { name: "النتيجة", value: result },
               )
               .setColor(pt > bt ? 0x00ff00 : 0xff0000);
-            await i.editReply({ embeds: [embed], components: [] });
+            await channel.send({ embeds: [embed] });
             break;
           }
 
           case "letter": {
             const letters = "ابتثجحخدذرزسشصضطظعغفقكلمنهوي";
             const letter = letters[Math.floor(Math.random() * letters.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("🔠 الحرف المشترك")
-              .setDescription(`الحرف الحين: **${letter}**\n\nكل واحد يكتب كلمة تبدأ بهذا الحرف!\nمن يتأخر أكثر من 10 ثواني أو يعيد كلمة قيلت يخسر! 💥`)
-              .setColor(0x9b59b6);
-            await i.editReply({ embeds: [embed], components: [] });
-            break;
-          }
-
-          case "mystery": {
-            const person = mysteryPersons[Math.floor(Math.random() * mysteryPersons.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("🌀 خمّن أنا مين؟")
-              .setDescription(`**الأدلة:**\n${person.hints.map((h, idx) => `${idx + 1}. ${h}`).join("\n")}`)
-              .setColor(0x2c3e50)
-              .setFooter({ text: "اكتب الاسم في الشات — عندك 20 ثانية!" });
-            await i.editReply({ embeds: [embed], components: [] });
-            try {
-              const collected = await channel.awaitMessages({
-                filter: m => m.author.id === interaction.user.id,
-                max: 1,
-                time: 20000,
-                errors: ["time"],
-              });
-              const answer = collected.first()!.content.toLowerCase();
-              const correct = person.name.toLowerCase().split(" ").some(w => answer.includes(w));
-              await collected.first()!.reply(correct ? `✅ **صح!** هو **${person.name}** 🎉` : `❌ **غلط!** الجواب: **${person.name}**`);
-            } catch {
-              await channel.send(`⏰ انتهى الوقت! الجواب: **${person.name}**`);
-            }
-            break;
-          }
-
-          case "fastest": {
-            const words = ["نار","ماء","جبل","نجمة","قمر","شمس","بحر","ريح","وردة","عقاب","أسد","ذئب"];
-            const word = words[Math.floor(Math.random() * words.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("⚡ من الأسرع؟")
-              .setDescription(`اكتب هذي الكلمة أسرع شخص:\n\n# ${word}\n\nعندكم **10 ثواني**! 🏁`)
-              .setColor(0xffff00);
-            await i.editReply({ embeds: [embed], components: [] });
-            const start = Date.now();
-            try {
-              const collected = await channel.awaitMessages({
-                filter: m => m.content === word,
-                max: 1,
-                time: 10000,
-                errors: ["time"],
-              });
-              const elapsed = ((Date.now() - start) / 1000).toFixed(2);
-              await collected.first()!.reply(`⚡ **${collected.first()!.author.username}** الأسرع! كتبها في **${elapsed} ثانية** 🏆`);
-            } catch {
-              await channel.send("⏰ ما كتبها أحد! ضعاف 😅");
-            }
+            await channel.send({ embeds: [oneShotEmbed("🔠 الحرف المشترك", `الحرف الحين: **${letter}**\n\nكل واحد يكتب كلمة تبدأ بهذا الحرف!\nمن يتأخر أكثر من 10 ثواني أو يعيد كلمة قيلت يخسر! 💥`, 0x9b59b6)] });
             break;
           }
 
           case "random_dare": {
             const dare = dares[Math.floor(Math.random() * dares.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("🎪 العقوبة العشوائية")
-              .setDescription(`يا **${interaction.user.username}** عليك:\n\n${dare}`)
-              .setColor(0xe74c3c);
-            await i.editReply({ embeds: [embed], components: [] });
-            break;
-          }
-
-          case "trivia": {
-            const q = triviaQuestions[Math.floor(Math.random() * triviaQuestions.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("🧠 سؤال ثقافي سريع")
-              .setDescription(`**${q.q}**`)
-              .setColor(0x3498db)
-              .setFooter({ text: "اكتب الجواب في الشات — عندك 15 ثانية!" });
-            await i.editReply({ embeds: [embed], components: [] });
-            try {
-              const collected = await channel.awaitMessages({
-                filter: m => m.author.id === interaction.user.id,
-                max: 1,
-                time: 15000,
-                errors: ["time"],
-              });
-              const ans = collected.first()!.content;
-              const correct = ans.includes(q.a) || q.a.includes(ans);
-              await collected.first()!.reply(correct ? `✅ **صح!** 🎉 الجواب: **${q.a}**` : `❌ **غلط!** الجواب الصحيح: **${q.a}**`);
-            } catch {
-              await channel.send(`⏰ انتهى الوقت! الجواب: **${q.a}**`);
-            }
+            await channel.send({ embeds: [oneShotEmbed("🎪 العقوبة العشوائية", `يا **${username}** عليك:\n\n${dare}`, 0xe74c3c)] });
             break;
           }
 
           case "bomb": {
             const bombWords = ["فريق","نصر","هدف","لعبة","بطولة","ديسكورد","سيرفر","تحدي","فوز","كود"];
             const word = bombWords[Math.floor(Math.random() * bombWords.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("💣 الكلمة المحظورة")
-              .setDescription(`الكلمة المحظورة الحين: **${word}** 💣\n\nتكلموا طبيعي لكن من قال الكلمة ينفجر 💥\nعندكم **2 دقيقة**!`)
-              .setColor(0xff4500);
-            await i.editReply({ embeds: [embed], components: [] });
+            await channel.send({ embeds: [oneShotEmbed("💣 الكلمة المحظورة", `الكلمة المحظورة: **${word}** 💣\n\nتكلموا طبيعي لكن من قال الكلمة ينفجر 💥\nعندكم **دقيقتان**!`, 0xff4500)] });
             break;
           }
 
           case "teams": {
-            const teamNames = [
-              ["🔥 الفريق الناري","🌊 الفريق المائي"],
-              ["⚡ الصواعق","🌪️ الأعاصير"],
-              ["🦁 الأسود","🐺 الذئاب"],
-              ["🎮 الغيمرز","🏆 الأبطال"],
+            const teamPairs = [
+              ["🔥 الفريق الناري", "🌊 الفريق المائي"],
+              ["⚡ الصواعق", "🌪️ الأعاصير"],
+              ["🦁 الأسود", "🐺 الذئاب"],
+              ["🎮 الغيمرز", "🏆 الأبطال"],
             ];
-            const picked = teamNames[Math.floor(Math.random() * teamNames.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("👥 توزيع الفرق")
-              .setDescription(`**${picked[0]}**\nضع أسماء لاعبيك هنا\n\n**${picked[1]}**\nضع أسماء لاعبيك هنا\n\nكل عضو يختار فريقه بالتصويت! 🗳️`)
-              .setColor(0x1abc9c);
-            await i.editReply({ embeds: [embed], components: [] });
+            const [t1, t2] = teamPairs[Math.floor(Math.random() * teamPairs.length)]!;
+            await channel.send({ embeds: [oneShotEmbed("👥 توزيع الفرق", `**${t1}**\nضع أسماء لاعبيك هنا\n\n**${t2}**\nضع أسماء لاعبيك هنا\n\nكل عضو يختار فريقه! 🗳️`, 0x1abc9c)] });
             break;
           }
 
           case "jackpot": {
             const win = Math.random() < 0.3;
             const amount = Math.floor(Math.random() * 5000) + 1000;
-            const embed = new EmbedBuilder()
-              .setTitle("🎰 جاكبوت")
-              .setDescription(win
-                ? `🎉 **جاكبوت!** يا **${interaction.user.username}** ربحت وهمياً **${amount.toLocaleString()} نقطة**! 🤑`
-                : `❌ **خسرت!** يا **${interaction.user.username}** الحظ مو معك اليوم 😅`)
-              .setColor(win ? 0xffd700 : 0xff0000);
-            await i.editReply({ embeds: [embed], components: [] });
+            await channel.send({ embeds: [oneShotEmbed("🎰 جاكبوت", win ? `🎉 **جاكبوت!** يا **${username}** ربحت وهمياً **${amount.toLocaleString()} نقطة**! 🤑` : `❌ **خسرت!** يا **${username}** الحظ مو معك اليوم 😅`, win ? 0xffd700 : 0xff0000)] });
             break;
           }
 
           case "story": {
             const starter = storyStarters[Math.floor(Math.random() * storyStarters.length)]!;
-            const embed = new EmbedBuilder()
-              .setTitle("📝 قصة جماعية")
-              .setDescription(`ابدأ القصة من هنا:\n\n*${starter}*\n\nكل واحد يكمل بجملة واحدة! من يتأخر أكثر من دقيقتين ينتهي دوره 📖`)
-              .setColor(0x8e44ad);
-            await i.editReply({ embeds: [embed], components: [] });
+            await channel.send({ embeds: [oneShotEmbed("📝 قصة جماعية", `ابدأ القصة من هنا:\n\n*${starter}*\n\nكل واحد يكمل بجملة واحدة! 📖`, 0x8e44ad)] });
             break;
           }
         }
