@@ -15,6 +15,8 @@ import { arabicFeaturesCommands } from "./commands/arabic_features";
 import { ticketsCommands, handleTicketButton } from "./commands/tickets";
 import { gamingMapsCommands } from "./commands/gaming_maps";
 import { autoreplyCommands, checkAutoReply, autoRepliesStore } from "./commands/autoreply";
+import { interactiveGamesCommands } from "./commands/interactive_games";
+import { prayerTrainingCommands } from "./commands/prayer_training";
 
 type Command = {
   data: { name: string; toJSON(): unknown };
@@ -37,6 +39,8 @@ const allCommands: Command[] = [
   ...ticketsCommands,
   ...gamingMapsCommands,
   ...autoreplyCommands,
+  ...interactiveGamesCommands,
+  ...prayerTrainingCommands,
 ];
 
 const isProduction = process.env["NODE_ENV"] === "production";
