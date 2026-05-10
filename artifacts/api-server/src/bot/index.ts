@@ -43,8 +43,6 @@ const allCommands: Command[] = [
   ...prayerTrainingCommands,
 ];
 
-const isProduction = process.env["NODE_ENV"] === "production";
-
 export async function startBot(): Promise<void> {
   const token = process.env["DISCORD_BOT_TOKEN"];
   if (!token) {
@@ -71,7 +69,7 @@ export async function startBot(): Promise<void> {
   }
 
   client.once(Events.ClientReady, async (readyClient) => {
-    logger.info({ tag: readyClient.user.tag, commands: commands.size, mode: isProduction ? "production" : "development" }, "Discord bot is ready!");
+    logger.info({ tag: readyClient.user.tag, commands: commands.size }, "Discord bot is ready!");
 
     const statusMessages = [
       { name: "/ai — تحدث مع الذكاء الاصطناعي 🤖", type: ActivityType.Watching },
@@ -96,46 +94,29 @@ export async function startBot(): Promise<void> {
     try {
       await rest.patch(Routes.currentApplication(), {
         body: {
-          description: "بوت SUKz — بوت عربي متكامل 🇸🇦\n\n🤖 /ask — ذكاء اصطناعي\n🎫 /ticket — نظام تذاكر\n🎮 /console — حل مشاكل الكونسل\n📿 /adhkar — أذكار إسلامية\n🧠 /trivia — أسئلة ثقافية\n⚡ 99 أمر جاهز!",
+          description: "بوت SUKz — بوت عربي متكامل 🇸🇦\n\n🤖 /ask — ذكاء اصطناعي\n🎫 /ticket — نظام تذاكر\n🎮 /console — حل مشاكل الكونسل\n📿 /adhkar — أذكار إسلامية\n🧠 /trivia — أسئلة ثقافية\n⚡ 96 أمر جاهز!",
         },
       });
     } catch { /* ignore if no permission */ }
+
     const commandBodies = allCommands.map(cmd => cmd.data.toJSON());
 
-    if (isProduction) {
-      try {
-        await rest.put(
-          Routes.applicationCommands(readyClient.user.id),
-          { body: commandBodies },
-        );
-        logger.info({ count: commandBodies.length }, "Global commands registered!");
-      } catch (err) {
-        logger.error({ err }, "Failed to register global commands");
-      }
-    } else {
-      const guilds = readyClient.guilds.cache;
-      if (guilds.size === 0) {
-        logger.warn("Bot is not in any guilds — commands not registered yet.");
-      }
-      for (const [guildId, guild] of guilds) {
-        try {
-          await rest.put(
-            Routes.applicationGuildCommands(readyClient.user.id, guildId),
-            { body: commandBodies },
-          );
-          logger.info({ guild: guild.name, count: commandBodies.length }, "Guild commands registered!");
-        } catch (err) {
-          logger.error({ err, guild: guild.name }, "Failed to register guild commands");
-        }
-      }
+    logger.info({ count: commandBodies.length }, "Registering global commands...");
+    try {
+      await rest.put(
+        Routes.applicationCommands(readyClient.user.id),
+        { body: commandBodies },
+      );
+      logger.info({ count: commandBodies.length }, "✅ Global commands registered successfully!");
+    } catch (err) {
+      logger.error({ err }, "❌ Failed to register global commands — commands may be missing or outdated");
     }
   });
 
   client.on(Events.InteractionCreate, async (interaction) => {
-    // Handle button interactions
     if (interaction.isButton()) {
       const btn = interaction as ButtonInteraction;
-        if (
+      if (
         btn.customId === "open_ticket_panel" ||
         btn.customId.startsWith("close_ticket_") ||
         btn.customId.startsWith("claim_ticket_") ||
@@ -144,9 +125,7 @@ export async function startBot(): Promise<void> {
         try { await handleTicketButton(btn); } catch (err) { logger.error({ err }, "Button handler error"); }
         return;
       }
-      if (
-        btn.customId.startsWith("music_")
-      ) {
+      if (btn.customId.startsWith("music_")) {
         try { await handleMusicButton(btn); } catch (err) { logger.error({ err }, "Music button error"); }
         return;
       }
