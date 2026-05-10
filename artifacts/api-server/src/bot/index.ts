@@ -1,6 +1,6 @@
 import { Client, Collection, Events, GatewayIntentBits, REST, Routes, ActivityType, ButtonInteraction, Message } from "discord.js";
 import { logger } from "../lib/logger";
-import { handleAuctionCommand } from "./commands/auction";
+import { auctionCommand } from "./commands/auction";
 import { generalCommands } from "./commands/general";
 import { funCommands } from "./commands/fun";
 import { utilityCommands } from "./commands/utility";
@@ -15,7 +15,7 @@ import { extraCommands } from "./commands/extra";
 import { arabicFeaturesCommands } from "./commands/arabic_features";
 import { ticketsCommands, handleTicketButton } from "./commands/tickets";
 import { gamingMapsCommands } from "./commands/gaming_maps";
-import { autoreplyCommands, checkAutoReply, autoRepliesStore } from "./commands/autoreply";
+import { autoreplyCommands, checkAutoReply } from "./commands/autoreply";
 import { interactiveGamesCommands } from "./commands/interactive_games";
 import { prayerTrainingCommands } from "./commands/prayer_training";
 
@@ -25,6 +25,7 @@ type Command = {
 };
 
 const allCommands: Command[] = [
+  auctionCommand,
   ...generalCommands,
   ...funCommands,
   ...utilityCommands,
@@ -73,13 +74,13 @@ export async function startBot(): Promise<void> {
     logger.info({ tag: readyClient.user.tag, commands: commands.size }, "Discord bot is ready!");
 
     const statusMessages = [
-      { name: "/ai — تحدث مع الذكاء الاصطناعي 🤖", type: ActivityType.Watching },
-      { name: "/ticket — افتح تذكرة دعم 🎫", type: ActivityType.Watching },
-      { name: "/console — حل مشاكل الكونسل 🎮", type: ActivityType.Watching },
-      { name: "/adhkar — أذكار إسلامية 📿", type: ActivityType.Watching },
-      { name: "/trivia — سؤال ثقافي 🧠", type: ActivityType.Watching },
-      { name: "/poll — صوّت مع السيرفر 📊", type: ActivityType.Watching },
-      { name: `${commands.size} أمر جاهزة لك ⚡`, type: ActivityType.Playing },
+      { name: "/auction — مزاد عشوائي 🔨",            type: ActivityType.Watching },
+      { name: "/ai — تحدث مع الذكاء الاصطناعي 🤖",  type: ActivityType.Watching },
+      { name: "/ticket — افتح تذكرة دعم 🎫",          type: ActivityType.Watching },
+      { name: "/console — حل مشاكل الكونسل 🎮",       type: ActivityType.Watching },
+      { name: "/adhkar — أذكار إسلامية 📿",            type: ActivityType.Watching },
+      { name: "/trivia — سؤال ثقافي 🧠",              type: ActivityType.Watching },
+      { name: `${commands.size} أمر جاهزة لك ⚡`,     type: ActivityType.Playing },
     ];
     let statusIndex = 0;
     const updateStatus = () => {
@@ -95,7 +96,7 @@ export async function startBot(): Promise<void> {
     try {
       await rest.patch(Routes.currentApplication(), {
         body: {
-          description: "بوت SUKz — بوت عربي متكامل 🇸🇦\n\n🤖 /ask — ذكاء اصطناعي\n🎫 /ticket — نظام تذاكر\n🎮 /console — حل مشاكل الكونسل\n📿 /adhkar — أذكار إسلامية\n🧠 /trivia — أسئلة ثقافية\n⚡ 96 أمر جاهز!",
+          description: "بوت SUKz — بوت عربي متكامل 🇸🇦\n\n🔨 /auction — مزاد عشوائي\n🤖 /ask — ذكاء اصطناعي\n🎫 /ticket — نظام تذاكر\n🎮 /console — حل مشاكل الكونسل\n📿 /adhkar — أذكار إسلامية",
         },
       });
     } catch { /* ignore if no permission */ }
@@ -159,14 +160,6 @@ export async function startBot(): Promise<void> {
   client.on(Events.MessageCreate, (message) => {
     const msg = message as Message;
     if (msg.author.bot) return;
-
-    if (msg.content.trim().toLowerCase() === "!auction") {
-      handleAuctionCommand(msg).catch(err =>
-        logger.error({ err }, "Auction command error")
-      );
-      return;
-    }
-
     checkAutoReply(msg);
   });
 
