@@ -1,5 +1,6 @@
-import { Client, Collection, Events, GatewayIntentBits, REST, Routes, ActivityType, ButtonInteraction } from "discord.js";
+import { Client, Collection, Events, GatewayIntentBits, REST, Routes, ActivityType, ButtonInteraction, Message } from "discord.js";
 import { logger } from "../lib/logger";
+import { handleAuctionCommand } from "./commands/auction";
 import { generalCommands } from "./commands/general";
 import { funCommands } from "./commands/fun";
 import { utilityCommands } from "./commands/utility";
@@ -156,7 +157,17 @@ export async function startBot(): Promise<void> {
   });
 
   client.on(Events.MessageCreate, (message) => {
-    checkAutoReply(message as import("discord.js").Message);
+    const msg = message as Message;
+    if (msg.author.bot) return;
+
+    if (msg.content.trim().toLowerCase() === "!auction") {
+      handleAuctionCommand(msg).catch(err =>
+        logger.error({ err }, "Auction command error")
+      );
+      return;
+    }
+
+    checkAutoReply(msg);
   });
 
   client.on("error", (err) => {
