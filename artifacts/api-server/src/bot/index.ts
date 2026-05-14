@@ -1,6 +1,7 @@
 import { Client, Collection, Events, GatewayIntentBits, REST, Routes, ActivityType, ButtonInteraction, Message } from "discord.js";
 import { logger } from "../lib/logger";
 import { auctionCommand } from "./commands/auction";
+import { challengeCommand, handleChallengeButton } from "./commands/challenge";
 import { generalCommands } from "./commands/general";
 import { funCommands } from "./commands/fun";
 import { utilityCommands } from "./commands/utility";
@@ -26,6 +27,7 @@ type Command = {
 
 const allCommands: Command[] = [
   auctionCommand,
+  challengeCommand,
   ...generalCommands,
   ...funCommands,
   ...utilityCommands,
@@ -143,6 +145,10 @@ export async function startBot(): Promise<void> {
       }
       if (btn.customId.startsWith("music_")) {
         try { await handleMusicButton(btn); } catch (err) { logger.error({ err }, "Music button error"); }
+        return;
+      }
+      if (btn.customId.startsWith("challenge_")) {
+        try { await handleChallengeButton(btn); } catch (err) { logger.error({ err }, "Challenge button error"); }
         return;
       }
     }
