@@ -103,6 +103,20 @@ export async function startBot(): Promise<void> {
 
     const commandBodies = allCommands.map(cmd => cmd.data.toJSON());
 
+    // ── مسح أوامر السيرفر القديمة (تمنع ظهور الأوامر العامة) ──────────────
+    for (const [guildId, guild] of readyClient.guilds.cache) {
+      try {
+        await rest.put(
+          Routes.applicationGuildCommands(readyClient.user.id, guildId),
+          { body: [] },
+        );
+        logger.info({ guild: guild.name }, "🗑️ Cleared old guild commands");
+      } catch (err) {
+        logger.warn({ err, guild: guild.name }, "Could not clear guild commands (non-fatal)");
+      }
+    }
+
+    // ── تسجيل الأوامر العامة ─────────────────────────────────────────────
     logger.info({ count: commandBodies.length }, "Registering global commands...");
     try {
       await rest.put(
@@ -111,7 +125,7 @@ export async function startBot(): Promise<void> {
       );
       logger.info({ count: commandBodies.length }, "✅ Global commands registered successfully!");
     } catch (err) {
-      logger.error({ err }, "❌ Failed to register global commands — commands may be missing or outdated");
+      logger.error({ err }, "❌ Failed to register global commands");
     }
   });
 
