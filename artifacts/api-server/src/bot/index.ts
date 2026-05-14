@@ -105,21 +105,21 @@ export async function startBot(): Promise<void> {
 
     const commandBodies = allCommands.map(cmd => cmd.data.toJSON());
 
-    // ── مسح أوامر السيرفر القديمة (تمنع ظهور الأوامر العامة) ──────────────
+    // ── تسجيل الأوامر في كل سيرفر مباشرة (تظهر فوراً بدون انتظار) ──────────
+    logger.info({ count: commandBodies.length, guilds: readyClient.guilds.cache.size }, "Registering guild commands...");
     for (const [guildId, guild] of readyClient.guilds.cache) {
       try {
         await rest.put(
           Routes.applicationGuildCommands(readyClient.user.id, guildId),
-          { body: [] },
+          { body: commandBodies },
         );
-        logger.info({ guild: guild.name }, "🗑️ Cleared old guild commands");
+        logger.info({ guild: guild.name, count: commandBodies.length }, "✅ Commands registered for guild");
       } catch (err) {
-        logger.warn({ err, guild: guild.name }, "Could not clear guild commands (non-fatal)");
+        logger.warn({ err, guild: guild.name }, "Could not register guild commands (non-fatal)");
       }
     }
 
-    // ── تسجيل الأوامر العامة ─────────────────────────────────────────────
-    logger.info({ count: commandBodies.length }, "Registering global commands...");
+    // ── تسجيل الأوامر العامة أيضاً (للسيرفرات الجديدة مستقبلاً) ─────────────
     try {
       await rest.put(
         Routes.applicationCommands(readyClient.user.id),
@@ -127,7 +127,7 @@ export async function startBot(): Promise<void> {
       );
       logger.info({ count: commandBodies.length }, "✅ Global commands registered successfully!");
     } catch (err) {
-      logger.error({ err }, "❌ Failed to register global commands");
+      logger.warn({ err }, "Could not register global commands (non-fatal)");
     }
   });
 
