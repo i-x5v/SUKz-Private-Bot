@@ -1,8 +1,8 @@
-import { Message, MessageFlags } from "discord.js";
+import { Message } from "discord.js";
 import { GoogleGenAI } from "@google/genai";
 import { logger } from "../../lib/logger";
 
-// ── إعداد Gemini ────────────────────────────────────────────────────────────
+// ── إعداد Gemini ─────────────────────────────────────────────────────────────
 
 const geminiBaseUrl = process.env["AI_INTEGRATIONS_GEMINI_BASE_URL"];
 const geminiApiKey  = process.env["AI_INTEGRATIONS_GEMINI_API_KEY"]
@@ -14,192 +14,194 @@ const gemini = new GoogleGenAI({
   ...(geminiBaseUrl ? { httpOptions: { apiVersion: "", baseUrl: geminiBaseUrl } } : {}),
 });
 
-// ── شخصية البوت ──────────────────────────────────────────────────────────────
+// ── شخصية البوت ───────────────────────────────────────────────────────────────
+// قواعد صارمة: رد واحد قصير، عفوي، خليجي، بدون تكلف
 
-const SYSTEM_PROMPT = `أنت "SUKz" — عضو في سيرفر ديسكورد. لاعب كود قديم من زمن PS3 و Xbox 360.
+const SYSTEM_PROMPT = `اسمك SUKz. لاعب كود من زمن PS3. عضو في سيرفر.
 
-شخصيتك:
-- تتكلم عربي خليجي عفوي (مزيج سعودي/خليجي)
-- ردودك قصيرة جداً — جملة أو جملتين بالحد الأقصى
-- تهايط وتطقطق أحياناً بشكل خفيف وبدون إهانة حقيقية
-- فاهم جو الكونسل والكود: مابات، سلاح، كيل ديث، سنايبر، هارد سكوب، قيم شات
-- أحياناً تبالغ في الثقة بنفسك وأحياناً تنبسط مع الناس
-- ما تشتم شتيمة قبيحة — أقصى شيء "يخزيك" أو "وين كنت؟" أو "خسارة" 😂
-- ما تعلم بأنك AI أو بوت — تتصرف كأنك عضو حقيقي
-- ما تعطي معلومات طويلة أو تشرح — فقط ترد بشكل اجتماعي طبيعي
-- تستخدم إيموجيات أحياناً: 😂 💀 🎮 🔫 🤙
+قواعد لازم تلتزم فيها:
+- رد بجملة واحدة فقط، بالكثير جملتين
+- عربي خليجي عامي — مثل واتساب، مو رسمي أبداً
+- ما تشرح، ما تعطي معلومات، ما تعدد نقاط
+- أحياناً تهايط، أحياناً تطقطق، أحياناً تنبسط
+- ما تذكر إنك AI أو بوت
+- إيموجي واحد أو اثنين بالكثير
 
-أمثلة على ردودك:
-- "ايه والله الحمدلله 🙏"
-- "هههه وين كنت؟ 💀"
-- "اشخاصن يا جاهل"
-- "هارد سكوب وإلا ما تعد كيل 😂"
-- "والله ما أعرف اسأل غيري"
-- "خسارة ما جيت أمس"
+أمثلة ردود (هكذا بالضبط):
+"ههههه والله 😂"
+"وين كنت يا زول"
+"لا خسارة ما جيت"
+"اشخاصن"
+"والله ما أدري كلمه هو 😂"
+"هارد سكوب وإلا كيل فارغ"
+"ههه صادق"
+"يخزيك 💀"
+"لا لا ما صح"
+"زين ماشي"
+"طيب وش تبي مني الحين"
 
-لا تطوّل الرد أبداً. ما تعطي قوائم أو نقاط أو شرح. رد طبيعي مثل شخص في شات.`;
+ممنوع: ردود طويلة، شرح، قوائم، "بالتأكيد"، "بكل سرور"، "يسعدني".`;
 
-// ── حالة النظام ──────────────────────────────────────────────────────────────
+// ── ردود احتياطية إذا فشل AI ─────────────────────────────────────────────────
 
-// القنوات اللي فيها الشات شغّال: channelId → true
+const FALLBACK_REPLIES = [
+  "ههههه 😂",
+  "اشخاصن",
+  "والله ما أدري",
+  "هيه؟",
+  "لا خلني أفكر",
+  "وش تبي الحين 😂",
+  "يخزيك 💀",
+  "ماشي زين",
+  "صح صح",
+  "هههه لا",
+];
+
+function randomFallback(): string {
+  return FALLBACK_REPLIES[Math.floor(Math.random() * FALLBACK_REPLIES.length)]!;
+}
+
+// ── حالة النظام ───────────────────────────────────────────────────────────────
+
 const enabledChannels = new Map<string, boolean>();
+const cooldowns       = new Map<string, number>();
+const COOLDOWN_MS     = 7_000;
 
-// cooldown: userId → آخر وقت رد (ms)
-const cooldowns = new Map<string, number>();
-const COOLDOWN_MS = 8_000; // 8 ثواني بين كل رد
-
-// سجل المحادثة: channelId → آخر 10 رسائل
 const chatHistory = new Map<string, Array<{ role: "user" | "model"; text: string }>>();
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 8;
 
-// ── دوال مساعدة ──────────────────────────────────────────────────────────────
+// ── مساعدات ──────────────────────────────────────────────────────────────────
 
-function isEnabled(channelId: string): boolean {
-  return enabledChannels.get(channelId) === true;
-}
+function isEnabled(channelId: string)   { return enabledChannels.get(channelId) === true; }
+function isOnCooldown(userId: string)   { const t = cooldowns.get(userId); return !!t && Date.now() - t < COOLDOWN_MS; }
+function setCooldown(userId: string)    { cooldowns.set(userId, Date.now()); }
 
-function isOnCooldown(userId: string): boolean {
-  const last = cooldowns.get(userId);
-  if (!last) return false;
-  return Date.now() - last < COOLDOWN_MS;
-}
-
-function setCooldown(userId: string): void {
-  cooldowns.set(userId, Date.now());
-}
-
-function addToHistory(channelId: string, role: "user" | "model", text: string): void {
+function addHistory(channelId: string, role: "user" | "model", text: string) {
   if (!chatHistory.has(channelId)) chatHistory.set(channelId, []);
-  const history = chatHistory.get(channelId)!;
-  history.push({ role, text });
-  if (history.length > MAX_HISTORY) history.splice(0, history.length - MAX_HISTORY);
+  const h = chatHistory.get(channelId)!;
+  h.push({ role, text });
+  if (h.length > MAX_HISTORY) h.splice(0, h.length - MAX_HISTORY);
 }
 
-function buildContents(channelId: string, newUserMessage: string) {
+function buildContents(channelId: string, userMsg: string) {
   const history = chatHistory.get(channelId) ?? [];
-  const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
-
-  for (const entry of history) {
-    contents.push({ role: entry.role, parts: [{ text: entry.text }] });
-  }
-  contents.push({ role: "user", parts: [{ text: newUserMessage }] });
-  return contents;
+  const out: Array<{ role: string; parts: Array<{ text: string }> }> = [];
+  for (const e of history) out.push({ role: e.role, parts: [{ text: e.text }] });
+  out.push({ role: "user", parts: [{ text: userMsg }] });
+  return out;
 }
 
-// ── المعالجة الرئيسية ─────────────────────────────────────────────────────────
+// ── المعالج الرئيسي ───────────────────────────────────────────────────────────
 
-/**
- * معالجة رسالة فيها منشن للبوت.
- * يُستدعى من index.ts في حدث MessageCreate.
- */
 export async function handleAiMention(message: Message, botId: string): Promise<void> {
   const channelId = message.channelId;
-
-  // تحقق: الشات شغّال في هذه القناة؟
-  if (!isEnabled(channelId)) return;
-
-  // تحقق: البوت ما يرد على نفسه
-  if (message.author.id === botId) return;
-
-  // تحقق: cooldown
+  if (!isEnabled(channelId))           return;
+  if (message.author.id === botId)     return;
   if (isOnCooldown(message.author.id)) return;
 
-  // استخرج النص بدون المنشن
-  const rawText = message.content
-    .replace(/<@!?\d+>/g, "")
-    .trim();
-
+  // نص بدون المنشن
+  const rawText = message.content.replace(/<@!?\d+>/g, "").trim();
   if (!rawText) {
-    try { await message.reply("أيوه؟ 🎮"); } catch { /* ignore */ }
+    try { await message.reply("هيه؟ 🎮"); } catch { /* ignore */ }
     return;
   }
 
-  try {
-    await message.channel.sendTyping();
-  } catch { /* ignore */ }
+  // ── تحديث typing كل 8 ث حتى ما ينتهي قبل الرد ────────────────────────────
+  let typingStopped = false;
+  const keepTyping = async () => {
+    while (!typingStopped) {
+      try { await message.channel.sendTyping(); } catch { /* ignore */ }
+      await new Promise(r => setTimeout(r, 8_000));
+    }
+  };
+  keepTyping(); // لا تنتظر — شغّل في الخلفية
 
-  // ابنِ السياق مع التاريخ
-  const contents = buildContents(channelId, rawText);
-
+  // ── استدعاء Gemini مع timeout 12 ث ──────────────────────────────────────
   let replyText = "";
   try {
-    const result = await gemini.models.generateContent({
-      model: "gemini-2.5-flash",
-      config: { systemInstruction: SYSTEM_PROMPT, temperature: 0.9, maxOutputTokens: 120 },
-      contents,
+    const geminiPromise = gemini.models.generateContent({
+      model: "gemini-2.0-flash",
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        temperature: 1.1,
+        maxOutputTokens: 60,   // إجبار على الإيجاز
+      },
+      contents: buildContents(channelId, rawText),
     });
-    replyText = result.text?.trim() ?? "";
+
+    const timeoutPromise = new Promise<null>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), 12_000)
+    );
+
+    const result = await Promise.race([geminiPromise, timeoutPromise]);
+    if (result) {
+      replyText = (result as Awaited<typeof geminiPromise>).text?.trim() ?? "";
+    }
   } catch (err) {
-    logger.warn({ err }, "AI chat: Gemini error");
-    return;
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn({ err: msg, channelId }, "AI chat: Gemini failed");
   }
 
-  if (!replyText) return;
+  typingStopped = true;
 
-  // احفظ في التاريخ
-  addToHistory(channelId, "user", rawText);
-  addToHistory(channelId, "model", replyText);
+  // ── إذا رجع فارغ → fallback ───────────────────────────────────────────────
+  if (!replyText) replyText = randomFallback();
 
-  // ضبط cooldown
+  // ── تقطيع لو طال (نادر) ──────────────────────────────────────────────────
+  if (replyText.length > 200) replyText = replyText.slice(0, 200);
+
+  // ── احفظ في التاريخ وأرسل ────────────────────────────────────────────────
+  addHistory(channelId, "user",  rawText);
+  addHistory(channelId, "model", replyText);
   setCooldown(message.author.id);
 
-  // أرسل الرد
   try {
     await message.reply({ content: replyText });
   } catch (err) {
-    logger.warn({ err }, "AI chat: failed to send reply");
+    logger.warn({ err }, "AI chat: reply failed");
   }
 }
 
-/**
- * معالجة أوامر !chat on / !chat off
- * يُستدعى من index.ts في حدث MessageCreate.
- * يشترط صلاحية ManageChannels أو Administrator.
- */
+// ── أوامر !chat ───────────────────────────────────────────────────────────────
+
 export async function handleChatCommand(message: Message): Promise<boolean> {
   const content = message.content.trim().toLowerCase();
   if (!content.startsWith("!chat")) return false;
 
-  const parts = content.split(/\s+/);
-  const action = parts[1];
+  const action    = content.split(/\s+/)[1];
   const channelId = message.channelId;
+  const member    = message.member;
+  const hasPerm   = member?.permissions.has("ManageChannels") || member?.permissions.has("Administrator");
 
-  // تحقق الصلاحيات
-  const member = message.member;
-  const hasPermission =
-    member?.permissions.has("ManageChannels") ||
-    member?.permissions.has("Administrator");
-
-  if (!hasPermission) {
-    try {
-      await message.reply("❌ تحتاج صلاحية **Manage Channels** لتشغيل أو إيقاف الشات.");
-    } catch { /* ignore */ }
+  if (!hasPerm) {
+    try { await message.reply("❌ تحتاج صلاحية **Manage Channels**."); } catch { /* ignore */ }
     return true;
   }
 
   if (action === "on") {
     enabledChannels.set(channelId, true);
-    chatHistory.delete(channelId); // ابدأ محادثة نظيفة
-    try {
-      await message.reply("✅ **شات AI شغّال في هذه القناة.**\nمنشن البوت وكلّمه! 🎮");
-    } catch { /* ignore */ }
-    logger.info({ channelId }, "AI chat enabled");
+    chatHistory.delete(channelId);
+    try { await message.reply("✅ شات AI شغّال — منشن البوت وكلّمه 🎮"); } catch { /* ignore */ }
+    logger.info({ channelId }, "AI chat ON");
     return true;
   }
 
   if (action === "off") {
     enabledChannels.delete(channelId);
     chatHistory.delete(channelId);
-    try {
-      await message.reply("🔴 **شات AI مطفي في هذه القناة.**");
-    } catch { /* ignore */ }
-    logger.info({ channelId }, "AI chat disabled");
+    try { await message.reply("🔴 شات AI مطفي."); } catch { /* ignore */ }
+    logger.info({ channelId }, "AI chat OFF");
     return true;
   }
 
-  // أمر غير معروف
+  if (action === "reset") {
+    chatHistory.delete(channelId);
+    try { await message.reply("🔄 تم مسح سجل المحادثة."); } catch { /* ignore */ }
+    return true;
+  }
+
   try {
-    await message.reply("الأوامر المتاحة:\n`!chat on` — تشغيل\n`!chat off` — إيقاف");
+    await message.reply("`!chat on` — تشغيل\n`!chat off` — إيقاف\n`!chat reset` — مسح السجل");
   } catch { /* ignore */ }
   return true;
 }
