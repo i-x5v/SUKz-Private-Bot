@@ -19,6 +19,7 @@ import { gamingMapsCommands } from "./commands/gaming_maps";
 import { autoreplyCommands, checkAutoReply } from "./commands/autoreply";
 import { interactiveGamesCommands } from "./commands/interactive_games";
 import { prayerTrainingCommands } from "./commands/prayer_training";
+import { handleAiMention, handleChatCommand } from "./commands/ai_chat";
 
 type Command = {
   data: { name: string; toJSON(): unknown };
@@ -177,9 +178,22 @@ export async function startBot(): Promise<void> {
     }
   });
 
-  client.on(Events.MessageCreate, (message) => {
+  client.on(Events.MessageCreate, async (message) => {
     const msg = message as Message;
     if (msg.author.bot) return;
+
+    // ── أوامر !chat on / !chat off ─────────────────────────────────────────
+    if (msg.content.trim().toLowerCase().startsWith("!chat")) {
+      try { await handleChatCommand(msg); } catch (err) { logger.error({ err }, "Chat command error"); }
+      return;
+    }
+
+    // ── AI منشن: إذا أحد منشن البوت ──────────────────────────────────────
+    if (client.user && msg.mentions.has(client.user.id)) {
+      try { await handleAiMention(msg, client.user.id); } catch (err) { logger.error({ err }, "AI mention error"); }
+    }
+
+    // ── الرد التلقائي ─────────────────────────────────────────────────────
     checkAutoReply(msg);
   });
 
