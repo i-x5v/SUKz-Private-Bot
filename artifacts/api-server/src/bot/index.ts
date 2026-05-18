@@ -20,6 +20,7 @@ import { autoreplyCommands, checkAutoReply } from "./commands/autoreply";
 import { interactiveGamesCommands } from "./commands/interactive_games";
 import { prayerTrainingCommands } from "./commands/prayer_training";
 import { handleAiMention, handleChatCommand } from "./commands/ai_chat";
+import { ps3Command } from "./commands/ps3_tool";
 
 type Command = {
   data: { name: string; toJSON(): unknown };
@@ -29,6 +30,7 @@ type Command = {
 const allCommands: Command[] = [
   auctionCommand,
   challengeCommand,
+  ps3Command,
   ...generalCommands,
   ...funCommands,
   ...utilityCommands,
