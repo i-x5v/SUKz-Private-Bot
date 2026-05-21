@@ -1,57 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('chat')
-    .setDescription('تحدث مع الذكاء الاصطناعي')
-    .addStringOption(opt =>
-      opt.setName('message').setDescription('رسالتك').setRequired(true).setMaxLength(1000)),
-
-  async execute(interaction) {
-    const message = interaction.options.getString('message');
-    await interaction.deferReply();
-
-    try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'أنت مساعد ذكي ودود تتحدث العربية بطلاقة. أجب باختصار ووضوح.' },
-            { role: 'user', content: message },
-          ],
-          max_tokens: 500,
-        }),
-      });
-
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      const reply = data.choices[0].message.content;
-
-      const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
-        .addFields(
-          { name: '💭 سؤالك', value: message },
-          { name: '🤖 الإجابة', value: reply.slice(0, 1024) },
-        )
-        .setFooter({ text: 'Powered by AI' })
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-    } catch (err) {
-      console.error(err);
-      await interaction.editReply('❌ حصل خطأ، حاول لاحقاً.');
-    }
-  },
-};require('dotenv').config();
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
@@ -67,9 +17,12 @@ for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) 
   commandsData.push(command.data.toJSON());
 }
 
+// حالة تشغيل وإيقاف الذكاء الاصطناعي لكل سيرفر
+const aiEnabledServers = new Set();
+
 client.once('ready', async () => {
   console.log(`✅ ${client.user.tag} يعمل الآن`);
-  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);MTQ3NjQyMDE3MDMzMDI3NTg2MA.G0d4yQ.5JtkokAqHhJidH1P5vf8sxpjW2fEdS5eLrO8G4
+  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
   await rest.put(Routes.applicationCommands(client.user.id), { body: commandsData });
   console.log('✅ تم تسجيل الأوامر');
 });
@@ -88,126 +41,76 @@ client.on('interactionCreate', async (interaction) => {
   if (ticket?.handleInteraction) await ticket.handleInteraction(interaction);
 });
 
-client.login(process.env.TOKEN);MTQ3NjQyMDE3MDMzMDI3NTg2MA.G0d4yQ.5JtkokAqHhJidH1P5vf8sxpjW2fEdS5eLrO8G4const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+// معالج الأوامر النصية
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
 
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('say')
-    .setDescription('يخلي البوت يقول رسالة باسمك')
-    .addStringOption(opt =>
-      opt.setName('message')
-        .setDescription('الرسالة اللي تبي البوت يقولها')
-        .setRequired(true)
-        .setMaxLength(2000))
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+  const prefix = '!';
 
-  async execute(interaction) {
-    const message = interaction.options.getString('message');
-    await interaction.reply({ content: '✅ تم الإرسال', ephemeral: true });
-    await interaction.channel.send(message);
-  },
-};const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  StringSelectMenuBuilder,
-  PermissionFlagsBits,
-  ChannelType,
-} = require('discord.js');
-
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('ticket')
-    .setDescription('إرسال لوحة فتح التذاكر')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-
-  async execute(interaction) {
+  // أمر !chat on
+  if (message.content === `${prefix}chat on`) {
+    aiEnabledServers.add(message.guildId);
     const embed = new EmbedBuilder()
-      .setColor(0x5865F2)
-      .setTitle('🎫 نظام الدعم الفني')
-      .setDescription(
-        '**أهلاً بك في مركز الدعم!**\n\n' +
-        '> اختر نوع التذكرة من القائمة بالأسفل وسيتم إنشاء قناة خاصة بك مع فريق الدعم.\n\n' +
-        '🟢 **متاح الآن** • ⏱️ متوسط الرد: 5 دقائق'
-      )
-      .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-      .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() })
-      .setTimestamp();
+      .setColor(0x57F287)
+      .setTitle('✅ الذكاء الاصطناعي مفعل')
+      .setDescription('تم تفعيل الذكاء الاصطناعي! منشن البوت وسيرد عليك 🤖');
+    return message.reply({ embeds: [embed] });
+  }
 
-    const menu = new StringSelectMenuBuilder()
-      .setCustomId('ticket_menu')
-      .setPlaceholder('🔽 اختر نوع التذكرة...')
-      .addOptions([
-        { label: 'دعم عام', description: 'استفسارات أو مساعدة عامة', value: 'general', emoji: '💬' },
-        { label: 'مشكلة تقنية', description: 'الإبلاغ عن مشكلة أو خطأ', value: 'bug', emoji: '🐛' },
-        { label: 'شكوى', description: 'تقديم شكوى ضد عضو', value: 'report', emoji: '🚨' },
-        { label: 'شراكة', description: 'طلب شراكة أو تعاون', value: 'partner', emoji: '🤝' },
-      ]);
+  // أمر !chat off
+  if (message.content === `${prefix}chat off`) {
+    aiEnabledServers.delete(message.guildId);
+    const embed = new EmbedBuilder()
+      .setColor(0xED4245)
+      .setTitle('❌ الذكاء الاصطناعي معطل')
+      .setDescription('تم تعطيل الذكاء الاصطناعي.');
+    return message.reply({ embeds: [embed] });
+  }
 
-    await interaction.channel.send({
-      embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(menu)],
-    });
-    await interaction.reply({ content: '✅ تم إرسال اللوحة', ephemeral: true });
-  },
+  // التحقق من الرد على منشن البوت
+  if (aiEnabledServers.has(message.guildId) && message.mentions.has(client.user)) {
+    try {
+      await message.channel.sendTyping();
 
-  async handleInteraction(interaction) {
-    if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_menu') {
-      const type = interaction.values[0];
-      const labels = { general: 'دعم-عام', bug: 'مشكلة', report: 'شكوى', partner: 'شراكة' };
+      // احصل على الرسالة بدون منشن
+      const userMessage = message.content
+        .replace(new RegExp(`<@!?${client.user.id}>`, 'g'), '')
+        .trim();
 
-      const existing = interaction.guild.channels.cache.find(
-        c => c.name === `ticket-${interaction.user.username.toLowerCase()}`
-      );
-      if (existing) {
-        return interaction.reply({ content: `❌ لديك تذكرة مفتوحة بالفعل: ${existing}`, ephemeral: true });
+      if (!userMessage) {
+        return message.reply('📝 من فضلك اكتب رسالة!');
       }
 
-      const channel = await interaction.guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        topic: `تذكرة | ${labels[type]} | ${interaction.user.id}`,
-        permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
-          {
-            id: interaction.user.id,
-            allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles],
-          },
-        ],
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'أنت مساعد ذكي ودود وفكاهي تتحدث العربية بطلاقة. أجب باختصار وودية وبشكل طبيعي مثل الانسان.' },
+            { role: 'user', content: userMessage },
+          ],
+          max_tokens: 500,
+        }),
       });
 
-      const welcome = new EmbedBuilder()
-        .setColor(0x57F287)
-        .setTitle(`🎫 تذكرة • ${labels[type]}`)
-        .setDescription(
-          `أهلاً ${interaction.user} 👋\n\n` +
-          '> سيقوم فريق الدعم بالرد عليك في أقرب وقت.\n' +
-          '> اشرح مشكلتك بالتفصيل من فضلك.\n\n' +
-          '⚠️ اضغط على الزر بالأسفل لإغلاق التذكرة.'
-        )
-        .setTimestamp();
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const reply = data.choices[0].message.content;
 
-      const buttons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ticket_close').setLabel('إغلاق التذكرة').setEmoji('🔒').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('ticket_claim').setLabel('استلام').setEmoji('✋').setStyle(ButtonStyle.Primary),
-      );
-
-      await channel.send({ content: `${interaction.user}`, embeds: [welcome], components: [buttons] });
-      await interaction.reply({ content: `✅ تم إنشاء تذكرتك: ${channel}`, ephemeral: true });
+      // إرسال الرد بحد أقصى 2000 حرف (حد ديسكورد)
+      const chunks = reply.match(/[\s\S]{1,2000}/g) || [];
+      for (const chunk of chunks) {
+        await message.reply({ content: chunk, allowedMentions: { repliedUser: false } });
+      }
+    } catch (err) {
+      console.error(err);
+      message.reply('❌ حصل خطأ في الذكاء الاصطناعي، حاول لاحقاً.');
     }
+  }
+});
 
-    if (interaction.isButton() && interaction.customId === 'ticket_close') {
-      await interaction.reply({ content: '🔒 سيتم إغلاق التذكرة خلال 5 ثواني...' });
-      setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
-    }
-
-    if (interaction.isButton() && interaction.customId === 'ticket_claim') {
-      const embed = new EmbedBuilder()
-        .setColor(0xFEE75C)
-        .setDescription(`✋ تم استلام التذكرة بواسطة ${interaction.user}`);
-      await interaction.reply({ embeds: [embed] });
-    }
-  },
-};
+client.login(process.env.TOKEN);
