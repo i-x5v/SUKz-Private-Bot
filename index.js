@@ -1,0 +1,122 @@
+require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const { Client, Collection, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
+
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+});
+
+client.commands = new Collection();
+const commandsData = [];
+
+// حالة تشغيل وإيقاف الذكاء الاصطناعي لكل سيرفر
+const aiEnabledServers = new Set();
+
+// تحميل الأوامر من مجلد commands
+const commandsPath = path.join(__dirname, 'commands');
+if (fs.existsSync(commandsPath)) {
+  const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
+  for (const file of commandFiles) {
+    const command = require(path.join(commandsPath, file));
+    if (command.data) {
+      client.commands.set(command.data.name, command);
+      commandsData.push(command.data.toJSON());
+    }
+  }
+}
+
+client.once('ready', async () => {
+  console.log(`✅ ${client.user.tag} يعمل الآن`);
+  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+  await rest.put(Routes.applicationCommands(client.user.id), { body: commandsData });
+  console.log('✅ تم تسجيل الأوامر');
+});
+
+client.on('interactionCreate', async (interaction) => {
+  if (interaction.isChatInputCommand()) {
+    const command = client.commands.get(interaction.commandName);
+    if (command) {
+      try { await command.execute(interaction); }
+      catch (e) { console.error(e); }
+    }
+    return;
+  }
+
+  const ticket = client.commands.get('ticket');
+  if (ticket?.handleInteraction) await ticket.handleInteraction(interaction);
+});
+
+// معالج الأوامر النصية والرد على المنشن
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+
+  const prefix = '!';
+
+  // أمر !chat on
+  if (message.content === `${prefix}chat on`) {
+    aiEnabledServers.add(message.guildId);
+    const embed = new EmbedBuilder()
+      .setColor(0x57F287)
+      .setTitle('✅ الذكاء الاصطناعي مفعل')
+      .setDescription('تم تفعيل الذكاء الاصطناعي! منشن البوت وسيرد عليك 🤖');
+    return message.reply({ embeds: [embed] });
+  }
+
+  // أمر !chat off
+  if (message.content === `${prefix}chat off`) {
+    aiEnabledServers.delete(message.guildId);
+    const embed = new EmbedBuilder()
+      .setColor(0xED4245)
+      .setTitle('❌ الذكاء الاصطناعي معطل')
+      .setDescription('تم تعطيل الذكاء الاصطناعي.');
+    return message.reply({ embeds: [embed] });
+  }
+
+  // الرد على منشن البوت عندما يكون الذكاء الاصطناعي مفعل
+  if (aiEnabledServers.has(message.guildId) && message.mentions.has(client.user)) {
+    try {
+      await message.channel.sendTyping();
+
+      // احصل على الرسالة بدون منشن
+      const userMessage = message.content
+        .replace(new RegExp(`<@!?${client.user.id}>`, 'g'), '')
+        .trim();
+
+      if (!userMessage) {
+        return message.reply('📝 من فضلك اكتب رسالة!');
+      }
+
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'أنت مساعد ذكي ودود وفكاهي تتحدث العربية بطلاقة. أجب باختصار وودية وبشكل طبيعي مثل الانسان.' },
+            { role: 'user', content: userMessage },
+          ],
+          max_tokens: 500,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const reply = data.choices[0].message.content;
+
+      // إرسال الرد بحد أقصى 2000 حرف (حد ديسكورد)
+      const chunks = reply.match(/[\s\S]{1,2000}/g) || [];
+      for (const chunk of chunks) {
+        await message.reply({ content: chunk, allowedMentions: { repliedUser: false } });
+      }
+    } catch (err) {
+      console.error(err);
+      message.reply('❌ حصل خطأ في الذكاء الاصطناعي، حاول لاحقاً.');
+    }
+  }
+});
+
+client.login(process.env.TOKEN);
