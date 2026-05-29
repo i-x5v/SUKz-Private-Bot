@@ -1248,7 +1248,7 @@ const WEAPON_ATTACHMENTS: Record<string, string[]> = {
   "RSASS":          ["Ballistics CPU", "Thermal Scope", "Extended Mag"],
   "FMG9":           ["Akimbo", "Extended Mag", "Suppressor"],
   "G36C":           ["Red Dot Sight", "Suppressor", "Kick"],
-  "P90":            ["Extended Mag", "Rapid Fire", "Silencer"],
+  "P90_MW3":        ["Extended Mag", "Rapid Fire", "Silencer"],
   "M16A4_MW3":      ["Kick", "Red Dot Sight", "Suppressor"],
   // ── BO2 ──
   "MSMC":           ["Fast Mag", "Stock", "Suppressor"],

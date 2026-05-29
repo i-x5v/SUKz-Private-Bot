@@ -110,7 +110,7 @@ export async function handleAiMention(message: Message, botId: string): Promise<
   let typingStopped = false;
   const keepTyping = async () => {
     while (!typingStopped) {
-      try { await message.channel.sendTyping(); } catch { /* ignore */ }
+      try { if ('sendTyping' in message.channel) await (message.channel as { sendTyping(): Promise<void> }).sendTyping(); } catch { /* ignore */ }
       await new Promise(r => setTimeout(r, 8_000));
     }
   };

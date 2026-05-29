@@ -41,7 +41,7 @@ function sendCommand(ip: string, commandId: number, body: Buffer): Promise<Buffe
       socket.write(packet);
     });
 
-    socket.on("data", (chunk) => {
+    socket.on("data", (chunk: Buffer) => {
       responseChunks.push(chunk);
     });
 

@@ -41,7 +41,7 @@ export const bankCommand = {
       ephemeral: true,
     });
 
-    const filter = (i: StringSelectMenuInteraction) => i.user.id === userId;
+    const filter = (i: { user: { id: string } }) => i.user.id === userId;
     const collector = interaction.channel?.createMessageComponentCollector({ filter, time: 60000, max: 1 });
 
     if (collector) {
